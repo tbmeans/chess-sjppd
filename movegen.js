@@ -544,8 +544,9 @@ export default class ChessPosition {
   get countOfChecks() {
     const sjppd = this.sjppdOnActiveKing;
     const enemyKnightFE = this.inactiveKnightFE;
-    let countOfChecks = this.eventRays(sjppd, "check").map(o => o.length);
+    let countOfChecks = this.eventRays(sjppd, "check");
 
+    countOfChecks = countOfChecks.map(o => o.length);
     countOfChecks = countOfChecks.map(v => v ? 1 : 0);
     countOfChecks = countOfChecks.reduce( (pre, cur) => pre + cur );
     countOfChecks += sjppd.indexOf('x', enemyKnightFE) > -1 ? 1 : 0;
@@ -648,13 +649,13 @@ export default class ChessPosition {
     let sjpd = this.sjpd(this.ppd, ppdIdxOfPc, 1);
     let moves;
 
-    if (piece.toLowerCase() === 'b') {
+    if ( piece.match(/b/i) ) {
       sjpd = sjpd.replace(/[flx]/gi, '.');
-    } else if (piece.toLowerCase() === 'n') {
+    } else if ( piece.match(/n/i) ) {
       sjpd = sjpd.replace(/[adfl]/gi, '.');
-    } else if (piece.toLowerCase() === 'q') {
+    } else if ( piece.match(/q/i) ) {
       sjpd = sjpd.replace(/x/gi, '.');
-    } else if (piece.toLowerCase() === 'r') {
+    } else if ( piece.match(/r/i) ) {
       sjpd = sjpd.replace(/[adx]/gi, '.');
     }
 
