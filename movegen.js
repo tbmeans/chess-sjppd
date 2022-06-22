@@ -1,4 +1,8 @@
 export default class ChessPosition {
+  AN = Array.from( {length: 64}, (v, i) => {
+    return "abcdefgh"[i % 8] + ( 8 - parseInt(i / 8) );
+  });
+
   REGX = {
     check: {
       w: [
@@ -84,13 +88,9 @@ export default class ChessPosition {
       return 0;
     }
 
-    if ( [x, y].some(x => typeof(x) === 'movesMade[i]ect') ) {
+    if ( [x, y].some(x => typeof(x) === 'object') ) {
       console.log("Use spread syntax if you want to enter an array.");
       return 0;
-    }
-
-    if (x > -1 && x < 64) {
-      return x;
     }
 
     const isFile = s => {
@@ -98,22 +98,35 @@ export default class ChessPosition {
         "abcdefgh".includes(s)
       );
     };
+
     const isRank = x => {
       return !isNaN(x) && parseInt(x) === Number(x) && (x > 0 && x < 9);
     };
+
+    const isChessCartesian = x => isRank(x + 1);
+
+    const isPpdIdx = x => {
+      return !isNaN(x) && parseInt(x) === Number(x) && (x > -1 && x < 64);
+    };
+
+    if ( [x, y].every(x => isChessCartesian(x)) ) {
+      return x - 8 * y + 56;
+    }
+
+    if ( isPpdIdx(x) || isPpdIdx(y) ) {
+      return isPpdIdx(x) ? x : y;
+    }
+
     const isAN = s => {
       return (typeof(s) === 'string' && s.length === 2 &&
         isFile(s[0]) && isRank(s[1])
       );
     };
+
     const ppdIdxFromAN = s => "abcdefgh".indexOf(s[0]) - 8 * s[1] + 64;
 
     if (x != undefined && isAN(x) ) {
       return ppdIdxFromAN(x);
-    }
-
-    if (x == undefined && (y > -1 && y < 64) ) {
-      return y;
     }
 
     if ( x == undefined && isAN(y) ) {
@@ -121,14 +134,9 @@ export default class ChessPosition {
     }
 
     const listIsAN = (x, y) => isFile(x) && isRank(y);
-    const isChessCartesian = x => isRank(x + 1);
 
     if ( listIsAN(x, y) ) {
       return "abcdefgh".indexOf(x) - 8 * y + 64;
-    }
-
-    if ( [x, y].every(x => isChessCartesian(x)) ) {
-      return x - 8 * y + 56;
     }
 
     return 0;
@@ -139,7 +147,7 @@ export default class ChessPosition {
       return [ 0, 0 ];
     }
 
-    if (typeof(x) === 'movesMade[i]ect') {
+    if (typeof(x) === 'object') {
       return x;
     }
 
@@ -701,11 +709,23 @@ export default class ChessPosition {
       }
 
       if (moves[i].length) {
-        moves[i] = moves[i].map(x => this.toAN(x));
+        moves[i] = moves[i].map(x => this.AN[x]);
       }
     }
 
     return JSON.stringify(moves);
+  }
+
+  get movesByAN() {
+    const moves = JSON.parse(this.allMovesStr);
+    const AN = this.AN;
+    const nAMap = new Map();
+
+    for (let i = 0; i < 64; i++) {
+      nAMap.set(AN[i], moves[i]);
+    }
+
+    return nAMap;
   }
 
   get countOfMoves() {
@@ -714,13 +734,13 @@ export default class ChessPosition {
     });
   }
 
-  graphSlideAndJumpPlacementData(sjpd, ppd) {
+  graphSlideJumpAndPiecePlacementData(sjpd, ppd) {
     for (let rank, i = 0; i < 64; i++) {
       if (i === 0) {
         console.log();
       }
       if (i % 8 === 0) {
-        rank = '12345678'[i / 8] + '  ';
+        rank = '12345678'[7 - i / 8] + '  ';
       }
 
       if (ppd[i] != 1) {
@@ -745,12 +765,12 @@ export default class ChessPosition {
     }
   }
 
-  sjpdGraph(sjpd, ppd) {
-    this.graphSlideAndJumpPlacementData(sjpd, ppd);
+  sjppdGraph(sjpd, ppd) {
+    this.graphSlideJumpAndPiecePlacementData(sjpd, ppd);
   }
 
   graph() {
-    this.sjpdGraph(this.sjToActiveKing, this.ppd);
+    this.sjppdGraph(this.sjToActiveKing, this.ppd);
   }
 
   graphLegalMoves(x, y) {
@@ -769,7 +789,7 @@ export default class ChessPosition {
       }
     }
 
-    this.graphSlideAndJumpPlacementData(mpd, this.ppd);
+    this.graphSlideJumpAndPiecePlacementData(mpd, this.ppd);
   }
 
   disambiguationStr(move) {
