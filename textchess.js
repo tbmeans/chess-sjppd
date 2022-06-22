@@ -23,18 +23,28 @@ const sideChoice = {
   confirmChoiceMessage: "You are playing as %s"
 };
 
+const orgChoice = {
+  question: 'Enter algebraic notation of the square ' +
+  'that the piece you want to move is on. ',
+  defaultMessage: "You selected a square with no piece, " +
+  "a square on which is a piece with no moves, " +
+  "or did not enter valid algebraic notation. " +
+  "Defaulting to the highest rank & left-most file piece with a move.",
+  confirmChoiceMessage: "You selected the %s on %s. Here are its moves:"
+};
+
 let uWhite = 'user';
 
 let uBlack = 'cpu';
 
 let game;
 
-startGame();
+gameLoop();
 
-async function startGame() {
-  const answer = await question(sideChoice.question);
-  const wbMatch = answer.match(/^w|b/i);
-  let selectedBlack;
+async function gameLoop() {
+  let choice = await question(sideChoice.question);
+  let wbMatch = choice.match(/^w|b/i);
+  let selectedBlack, game;
 
   if (wbMatch == null) {
     console.log(sideChoice.defaultMessage);
@@ -54,8 +64,21 @@ async function startGame() {
   );
 
   game = new ChessGame(new ChessPosition(), uWhite, uBlack);
+  game.initPosition.sjpdGraph('.'.repeat(64), game.initPosition.ppd);
+
+  if (uWhite === 'cpu') {
+    game.curMove = new ChessMove( ...cpuPlay(game.curPosition) );
+    console.log("Computer moved:");
+    game.curPosition.sjpdGraph('.'.repeat(64), game.curPosition.ppd);
+  }
+
+  let loopCount = 0;
+
+  while (loopCount < 3) {
+    choice = await question(orgChoice.question);
+    console.log(choice);
+    loopCount++;
+  }
 
   rl.close();
-
-  game.initPosition.sjpdGraph('.'.repeat(64), game.initPosition.ppd);
 }
