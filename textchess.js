@@ -1,13 +1,21 @@
 import readline from 'readline';
 
+import util from 'util';
+
 import ChessPosition from './movegen.js';
 
 import ChessGame from './game.js';
+
+import ChessMove from './movedata.js';
+
+import cpuPlay from './engine.js';
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
+
+const question = util.promisify(rl.question).bind(rl);
 
 const sideChoice = {
   question: 'Enter your choice of side to play, white or black. ',
@@ -21,7 +29,10 @@ let uBlack = 'cpu';
 
 let game;
 
-rl.question(sideChoice.question, (answer) => {
+startGame();
+
+async function startGame() {
+  const answer = await question(sideChoice.question);
   const wbMatch = answer.match(/^w|b/i);
   let selectedBlack;
 
@@ -47,4 +58,4 @@ rl.question(sideChoice.question, (answer) => {
   rl.close();
 
   game.initPosition.sjpdGraph('.'.repeat(64), game.initPosition.ppd);
-});
+}
