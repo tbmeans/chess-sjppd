@@ -245,10 +245,10 @@ export default class ChessPosition {
 
     const color = this.toPieceColor;
     const orgPcColor = color(ppd[ppdIdxOfOrg]);
-    const sjppd = Array(64);
     const rayMarks = [ 'd', 'f', 'a', 'l' ];
     const leftCount = { d: 0, f: 0, a: 0, l: 0 };
     const rightCount = { d: 0, f: 0, a: 0, l: 0 };
+    let sjppd = Array(64);
     let l = ppdIdxOfOrg - 1;
     let r = ppdIdxOfOrg + 1;
     let leftMark, rightMark;
@@ -301,14 +301,14 @@ export default class ChessPosition {
       }
     }
 
-    sjppd.map(function(s, i) {
+    sjppd = sjppd.map(s => {
       let isMarkingJumpOnSameColor = s[0] === 'x';
 
-      isMarkingJumpOnSameColor &&= ppd[i] != 1;
-      isMarkingJumpOnSameColor &&= color(ppd[i]) === orgPcColor;
+      isMarkingJumpOnSameColor &&= s[1] != 1;
+      isMarkingJumpOnSameColor &&= color(s[1]) === orgPcColor;
 
       if (isMarkingJumpOnSameColor) {
-        return 'X' + ppd[i];
+        return 'X' + s[1];
       }
 
       return s;
