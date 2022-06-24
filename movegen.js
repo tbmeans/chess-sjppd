@@ -331,48 +331,53 @@ export default class ChessPosition {
 
   rays(sjppd) {
     const ppdIdxOfOrg = sjppd.map(s => s[0]).indexOf('o');
-    const idsToXYStepSum = (idx1, idx2) => {
-      const dx = idx2 % 8 - idx1 % 8;
-      const dy = parseInt(idx1 / 8) - parseInt(idx2 / 8);
-      const sign = x => x / Math.abs(x);
-
-      return ( dx === 0 ? 0 : sign(dx) ) + ( dy === 0 ? 0 : sign(dy) );
+    const sjppdSplitOnOrg = [
+      sjppd.slice(0, ppdIdxOfOrg).reverse(),
+      sjppd.slice(ppdIdxOfOrg + 1)
+    ];
+    const ppdIdxSplitOnOrg = [
+      sjppd.slice(0, ppdIdxOfOrg).map( (s, i, arr) => {
+        return [arr.length, i];
+      }).reverse(),
+      sjppd.map( (s, i) => i ).slice(ppdIdxOfOrg + 1).map( (v, i) => {
+        return [ v - i - 1, v ];
+      })
+    ];
+    const componentsAreEqual = o => {
+      return o[1] % 8 - o[0] % 8 === parseInt(o[0] / 8) - parseInt(o[1] / 8);
+    };
+    const componentsAreEqualAndOpp = o => {
+      return o[1] % 8 - o[0] % 8 === parseInt(o[1] / 8) - parseInt(o[0] / 8);
     };
     const rays = Array.from( {length: 8}, v => new Object() );
-    let slideXYStepSums, sumXYStep, t;
-    let i = ppdIdxOfOrg - 1;
-    let j = ppdIdxOfOrg + 1;
 
-    for (t = 0; t < 8; t++) {
+    for (let marks, ids, dirByMark, dirByXY, len, t = 0; t < 8; t++) {
       Object.assign(rays[t], { ray: [], slides: [] });
-    }
+      marks = sjppdSplitOnOrg[parseInt(t / 4)];
+      ids = ppdIdxSplitOnOrg[parseInt(t / 4)];
 
-    while (i > -1 || j < 64) {
-      if (i > -1) {
-        slideXYStepSums = [ 2, 1, 0, -1 ];
-        sumXYStep = idsToXYStepSum(ppdIdxOfOrg, i);
-        t = slideXYStepSums.map(v => v === sumXYStep).indexOf(true);
-
-        if (t > -1) {
-          rays[t].ray.push(sjppd[i]);
-          rays[t].slides.push(i);
-        }
-
-        i--;
+      switch (t % 4) {
+        case 0:
+          dirByMark = s => s.match(/d/i) != null;
+          dirByXY = componentsAreEqual;
+          break;
+        case 1:
+          dirByMark = s => s.match(/f/i) != null;
+          dirByXY = o => o[1] % 8 - o[0] % 8 === 0;
+          break;
+        case 2:
+          dirByMark = s => s.match(/a/i) != null;
+          dirByXY = componentsAreEqualAndOpp;
+          break;
+        case 3:
+          dirByMark = s => s.match(/l/i) != null;
+          dirByXY = o => parseInt(o[0] / 8) - parseInt(o[1] / 8) === 0;
+          break;
       }
 
-      if (j < 64) {
-        slideXYStepSums = [ -2, -1, 0, 1 ];
-        sumXYStep = idsToXYStepSum(ppdIdxOfOrg, j);
-        t = 4 + slideXYStepSums.map(v => v === sumXYStep).indexOf(true);
-
-        if (t > 3) {
-          rays[t].ray.push(sjppd[j]);
-          rays[t].slides.push(j);
-        }
-
-        j++;
-      }
+      rays[t].ray = marks.filter(dirByMark);
+      len = rays[t].ray.length;
+      rays[t].slides = ids.filter(dirByXY).map(o => o[1]).slice(0, len);
     }
 
     return rays;
@@ -427,7 +432,7 @@ export default class ChessPosition {
       patternIndex = 1;
     }
 
-    return this.REGX[kingEvent][this.color][patternIndex];
+    return this.REGX[kingEvent][this.activeColor][patternIndex];
   }
 
   eventRays(sjppd, kingEvent) {
@@ -453,7 +458,7 @@ export default class ChessPosition {
   get activeKingIsInCheck() {
     const sjppd = this.sjppdOnActiveKing;
 
-    return (sjppd.indexOf('x', this.inactiveKnightFE) > -1 ||
+    return (sjppd.indexOf('x' + this.inactiveKnightFE) > -1 ||
       this.eventRays(sjppd, "check").some(v => v != null)
     );
   }
@@ -562,7 +567,7 @@ export default class ChessPosition {
     return countOfChecks;
   }
 
-  filterConstraints(moves, ppdIdxOfPc) {
+  filterConstraint(moves, ppdIdxOfPc) {
     const sjppd = this.sjppdOnActiveKing;
     const enemyKnightFE = this.inactiveKnightFE;
     const slideChecks = this.eventRays(sjppd, "check");
@@ -648,44 +653,44 @@ export default class ChessPosition {
     return this.filterConstraint(moves);
   }
 
-  bnqrLegalMoves(ppdIdxOfPc) {
+  knightLegalMoves(ppdIdxOfKnight) {
     if (this.countOfChecks > 1) {
       return [];
     }
 
-    const piece = this.ppd[ppdIdxOfPc];
-    let sjpd = this.sjpd(this.ppd, ppdIdxOfPc, 1);
-    let moves;
-
-    if ( piece.match(/b/i) ) {
-      sjpd = sjpd.replace(/[flx]/gi, '.');
-    } else if ( piece.match(/n/i) ) {
-      sjpd = sjpd.replace(/[adfl]/gi, '.');
-    } else if ( piece.match(/q/i) ) {
-      sjpd = sjpd.replace(/x/gi, '.');
-    } else if ( piece.match(/r/i) ) {
-      sjpd = sjpd.replace(/[adx]/gi, '.');
-    }
-
-    sjpd = sjpd.split('');
-
-    for (let i = 0; i < sjpd.length; i++) {
-      if (sjpd[i] === '.') {
-        continue;
-      }
-
-      if ( this.isLowerCase(sjpd[i]) ) { // empty or enemy
-        sjpd[i] = 'm';
-      } else if ( this.isUpperCase(sjpd[i]) ) { // same color
-        sjpd[i] = '.';
-      }
-    }
-
-    moves = sjpd.map( (s, i) => s === 'm' ? i : s ).filter(v => {
-      return isNaN(v) === false;
-    });
+    const moves = this.sjpd(this.ppd, ppdIdxOfKnight, 1
+    ).split('').map( (s, i) => s === 'x' ? i : s ).filter( v => !isNaN(v) );
 
     return this.filterConstraint(moves);
+  }
+
+  bqrLegalMoves(ppdIdxOfPc) {
+    const pieceInFEN = this.ppd[ppdIdxOfPc];
+    const rays = this.rays( this.sjppd(this.ppd, ppdIdxOfPc, 1) );
+    const ends = rays.map(o => {
+      for (let i = 0; i < o.ray.length; i++) {
+        if ( o.ray[i].match(/[adfl]\w/) ) {
+          return i + 1;
+        }
+
+        if ( o.ray[i].match(/[ADFL]\w/) ) {
+          return i;
+        }
+      }
+    });
+    let slides = [];
+
+    for (let i = 0; i < rays.length; i++) {
+      slides[i] = rays[i].slides.slice(0, ends[i])
+    }
+
+    if ( pieceInFEN.match(/b/i) ) {
+      slides = slides.filter( (o, i) => i % 2 === 0 );
+    } else if ( pieceInFEN.match(/r/i) ) {
+      slides = slides.filter( (o, i) => i % 2 === 1 );
+    }
+
+    return this.filterConstraint( slides.flat() )
   }
 
   get allMovesStr() {
@@ -700,12 +705,14 @@ export default class ChessPosition {
         continue;
       }
 
-      if ( pc.match(/[kK]/) ) {
+      if ( pc.match(/k/i) ) {
         moves[i] = this.kingLegalMoves;
-      } else if ( pc.match(/[pP]/) ) {
+      } else if ( pc.match(/p/i) ) {
         moves[i] = this.pawnLegalMoves(i);
+      } else if ( pc.match(/n/i) ) {
+        moves[i] = this.knightLegalMoves(i)
       } else {
-        moves[i] = this.bnqrLegalMoves(i);
+        moves[i] = this.bqrLegalMoves(i);
       }
 
       if (moves[i].length) {
@@ -883,8 +890,8 @@ export default class ChessPosition {
       }
 
       // Apply pawn promotion choice
-      if (m.promotionChoiceInFEN) {
-        ppArr.splice(idxOfDest, 1, m.promotionChoiceInFEN);
+      if (m.pawnReachedPromotionRank) {
+        ppArr.splice(m.ppdIdxOfDest, 1, m.promotionChoiceInFEN);
       }
 
       // active color toggles black and white
