@@ -42,7 +42,7 @@ export default class ChessMove {
 
   get pawnDepartedFromInit() {
     return (this.pawnIsMoving &&
-      ( this.nAOfOrg[1] === (this.whiteIsMoving ? 2 : 7) )
+      ( this.nAOfOrg[1] == (this.whiteIsMoving ? 2 : 7) )
     );
   }
 
@@ -74,7 +74,7 @@ export default class ChessMove {
   }
 
   get pawnReachedPromotionRank() {
-    return this.pawnIsMoving && this.nAOfDest[1] === (
+    return this.pawnIsMoving && this.nAOfDest[1] == (
       this.whiteIsMoving ? 8 : 1
     );
   }
@@ -85,10 +85,10 @@ export default class ChessMove {
     }
 
     if (this.whiteIsMoving) {
-      return m.promotionChoiceInSAN;
+      return this.promotionChoiceInSAN;
     }
 
-    return m.promotionChoiceInSAN.toLowerCase();
+    return this.promotionChoiceInSAN.toLowerCase();
   }
 
   get pawnIsMovingDiagonally() {
