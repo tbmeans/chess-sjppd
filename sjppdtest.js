@@ -1,40 +1,77 @@
 import assert from 'assert/strict'
 
-import ChessPosition from './movegen.js'
+import engine from './engine.js'
 
-import ChessGame from './game.js'
+const { Position, PositionReport,
+  SequenceOfMoves, PGNSevenTagRoster, cpuPlay
+} = engine;
 
-import ChessMove from './movedata.js'
-
-import cpuPlay from './engine.js'
-
-const p = new ChessPosition();
-
-const g = new ChessGame(p, 'user', 'cpu');
-
-const org = { ppdIdx: 52, nA: "e2", nFE: "P" };
-
-const dest = { ppdIdx: 36, nA: "e4", nFE: "1" };
-
-const m = new ChessMove(org, dest, "Q");
-
-const ri = parseInt( 64 * Math.random() );
-
-const rx = parseInt( 8 * Math.random() );
-
-const ry = parseInt( 8 * Math.random() );
-
-const sjppdKing = {
-  sjpd2pc: '............f.......f...a...f....a..f..d..axfxd...XAFDX...LLoLL.',
-  ppd: 'rnbqkbnrpppppppp' + '1'.repeat(32) + 'PPPPPPPPRNBQKBNR',
-  merge() {
-    const arr = [];
-    for (let i = 0; i < 64; i++) {
-      arr[i] = this.sjpd2pc[i] + this.ppd[i];
-    }
-    return arr;
+/*
+{
+  f2: {
+    pieceOnOrg: 'Q',
+    targetSquares: [
+      'g2', 'h2', 'g3', 'h4',
+      'f3', 'f4', 'e3', 'd4',
+      'e2', 'd2', 'c2', 'b2',
+      'a2', 'e1', 'f1', 'g1'
+    ],
+    e3: 'f',
+    d4: 'f',
+    c2: 'f2',
+    f3: '2',
+    f4: '2'
+  },
+  c5: {
+    pieceOnOrg: 'Q',
+    targetSquares: [
+      'd5', 'e5', 'd6', 'e7',
+      'f8', 'c6', 'c7', 'c8',
+      'b6', 'a7', 'b5', 'a5',
+      'b4', 'a3', 'c4', 'c3',
+      'c2', 'c1', 'd4', 'e3'
+    ],
+    e3: 'c',
+    d4: 'c',
+    c2: 'c5',
+    d5: 'c',
+    e5: 'c',
+    f8: 'c',
+    c8: 'c'
+  },
+  f5: {
+    pieceOnOrg: 'Q',
+    targetSquares: [
+      'g5', 'h5', 'g6', 'h7',
+      'f6', 'f7', 'f8', 'e6',
+      'd7', 'c8', 'e5', 'd5',
+      'e4', 'd3', 'c2', 'b1',
+      'f4', 'f3', 'g4', 'h3'
+    ],
+    c2: 'f5',
+    f3: '5',
+    f4: '5',
+    d5: 'f',
+    e5: 'f',
+    f8: 'f',
+    c8: 'f'
   }
 }
+
+let chessNode = new Position('8/8/8/2Q2Q2/8/8/5Q2/8', 'w', '-', '-', 0, '')
+let moves = chessNode.getAllMoves();
+*/
+
+const g = new ChessGame('visitor', 'cpu');
+
+const movetext = "1. Nf3 Nf6 2. e3 g6 3. b3 Bg7 4. Bb2 O-O 5. g3 c5 \
+6. Bg2 d5 7. O-O Nc6 8. d3 d4 9. e4 b6 10. a3 e5 11. b4 Bg4 12. bxc5 bxc5 \
+13. Nbd2 Rb8 14. Qb1 Nd7 15. c3 dxc3 16. h3 Rxb2 17. Qxb2 cxb2 18. Rab1 Bxf3 \
+19. Bxf3 Nb6 20. d4 Qxd4 21. Rfd1 Qc3 22. Be2 Nd4 23. Rdc1 bxc1=Q+ \
+24. Rxc1 Nxe2+ 25. Kf1 Nxc1 26. f4 Rd8 27. fxe5 Rxd2 28. Ke1 Nd3+ \
+29. Kf1 Qa1# 0-1";
+
+const movelist = [ "g1f3", "g8f6", "e2e3", "g7g6" ];
 
 let out = {
   "ppd of length 64": p.ppdLength64NoSlashChars,

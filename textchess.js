@@ -2,13 +2,9 @@ import readline from 'readline';
 
 import util from 'util';
 
-import ChessPosition from './movegen.js';
+import engine from './engine.js';
 
-import ChessGame from './game.js';
-
-import ChessMove from './movedata.js';
-
-import cpuPlay from './engine.js';
+const { SequenceOfMoves, cpuPlay } = engine;
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -80,12 +76,14 @@ const destChoice = {
     selectedBlack ? 'Black' : 'White'
   );
 
-  game = new ChessGame(new ChessPosition(), uWhite, uBlack);
-  game.initPosition.sjppdGraph('.'.repeat(64), game.initPosition.ppd);
-  allMoves = JSON.parse(game.initPosition.allMovesStr);
+  game = new SequenceOfMoves;
+  game.initPosition.plot();
+  allMoves = game.initPosition.getAllMoves();
 
   if (uWhite === 'cpu') {
-    allMoves = runEngine(game);
+    game.setMoveSeq( cpuPlay(allMoves) );
+    console.log("Computer moved:");
+
   }
 
   for (;;) {
