@@ -269,8 +269,8 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
   this.gameOver = gameOver;
 }
 
-PositionReport.prototype.toSAN = nSA;
-PositionReport.prototype.toPCN = nPC;
+PositionReport.prototype.toSAN = toSAN;
+PositionReport.prototype.toPCN = toPCN;
 
 /** Creates an object for tracking the progression of a chess game by storing
  * a sequence of moves in both pure coordinate notation (PCN) and the standard
@@ -291,7 +291,7 @@ SequenceOfMoves.prototype.getMoveSeq = function csvToArray() {
 };
 
 /** Provide a move in Pure Coordinate Notation (PCN) to increment the
- * move sequence. Call this setter then getCurPosition() to advance one ply.
+ * move sequence. Call this setter then getCurPositionData() to advance one ply.
  * @param {string} pcn a chess move in pure coordinate notation or a string such as "flag fall," "ff," "time," "resign," or "R" in place of PCN to indicate ending before the side that has the move makes a move.
  */
 SequenceOfMoves.prototype.setMoveSeq = function pushMove(pcn) {
@@ -1011,7 +1011,7 @@ function targetsTruncAfterCaptureOrBeforeActive( raysPlus, activeColor,
  * @param {string} pcn a chess move given in PCN
  * @returns {string} SAN for given chess move
  */
-function nSA(pcn) {
+function toSAN(pcn) {
   const castlingData = pcn.match(/e([18])([cg])\1/);
   const isCastling = castlingData != null;
 
@@ -1044,18 +1044,50 @@ function nSA(pcn) {
  * @param {string} san a chess move given in SAN
  * @returns {string} the given chess move in PCN
  */
-function nPC(san) {
+function toPCN(san) {
   const groups = /([BKNPQR][a-h]?[1-8]?x?|[a-h]x|)([a-h][1-8])(=[BNQR])?/;
   const [ , start, tsq, pro ] = san.match(groups);
-  const [ , orgFile ] = start.match(/([a-h])x/);
+  const [ , orgFile ] = start.match(/([a-h])x/) || [ '', '' ];
   const [ , orgPc, orgFileDA, orgRankDA, ] = start.match(
     /([BKNPQR])([a-h]?)([1-8]?)x?/
-  );
+  ) || [ '', '', '' ];
   const pawnMoveNoCap = start.length === 0;
-  let pcn;
+  let pcnOrg;
 
   for (const org in this.legalMoves) {
+    // match piece char, confirm no disambiguation, match target square
+    pcnOrg = orgPc === this.legalMoves[org][pieceOnOrg];
+    pcnOrg &&= (orgFileDA + orgRankDA).length === 0;
+    pcnOrg &&= this.legalMoves[org].targetSquares.includes(tsq) || '';
+
+    if (pcnOrg) {
+      pcnOrg = org;
+      break;
+    }
+
+    // non-pawn no disambiguation test failed, try non-pawn w/disambiguation
+    pcnOrg = orgPc === this.legalMoves[org][pieceOnOrg];
+    pcnOrg &&= (orgFileDA + orgRankDA) === this.legalMoves[org][tsq];
+
+    if (pcnOrg) {
+      pcnOrg = org;
+      break;
+    }
+
+    /* all non-pawn tests failed, try pawn stuff */
+
+    if ( pawnMoveNoCap && this.legalMoves[org].pieceOnOrg.match(/p/i) &&
+      this.legalMoves[org].targetSquares.includes(tsq) ) {
+        pcnOrg = org;
+        break;
+    }
+
+    if (orgFile === org[0] && this.legalMoves[org].pieceOnOrg.match(/p/i) &&
+      this.legalMoves[org].targetSquares.includes(tsq)) {
+        pcnOrg = org;
+        break;
+    }
   }
 
-  return pcn;
+  return pcnOrg + tsq + (pro ? pro.toLowerCase() : '');
 }
