@@ -32,11 +32,11 @@ const color = s => {
  * (FEN). Fields of FEN are substrings formed by splitting on space delimiters.
  * Default position constructed is initial position of chess.
  * @constructor
- * @param {string} [piecePlacementData] (PPD) first field of FEN (field index 0)
- * @param {string} [activeColor] (AC) second field of FEN (idx 1)
- * @param {string} [castlingAvailability] (CA) third field of FEN (idx 2)
- * @param {string} [enPassantTargetSquare] (EPTS) fourth field of FEN (idx 3)
- * @param {string} [halfmoveClock] (HMC) fifth field of FEN (idx 4)
+ * @param {string} [piecePlacementData] (PPD) layout of pieces by rank, pieces are single character first letters of name of type of piece, capitalized for white, lowercase for black, empty spaces marked by numbers, compressing consecutive empty squares into digits greater than 1
+ * @param {string} [activeColor] (AC) indicates the color of the side that has the move, a single char string 'w' for white or 'b' for black
+ * @param {string} [castlingAvailability] (CA) indicates whether each color may castle king/queenside by k and q chars, capital for white, lowercase for black; only indicates availability due to lack of movement/loss of king and rooks from initial position, does not indicate whether king is attacked or if paths are clear; dash indicates no castling availability both black and white
+ * @param {string} [enPassantTargetSquare] (EPTS) indicates that an en passant capture is available by listing the square to move to for the capture, dash char for no en passant capture available
+ * @param {string} [halfmoveClock] (HMC) count of reversible halfmoves (halfmove is a single turn by white or black) but does include castling which is irreversible; count resets to 0 on pawn move or capture (irreversible)
  * @param {string} [capturesInFEN] string of piece chars in FEN representing pieces no longer in the PPD due to capture.
  */
 function Position(piecePlacementData, activeColor, castlingAvailability,
@@ -53,7 +53,6 @@ function Position(piecePlacementData, activeColor, castlingAvailability,
 
 Position.prototype.plot = plot;
 Position.prototype.nextPosition = movePiece;
-Position.prototype.getMaterialSort = materialSort;
 
 /** For purposes of tracking repeatable positions, only the first four fields
  * of FEN are stringified, per application of the FIDE Laws of Chess to FEN.
@@ -84,7 +83,7 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
  * * Legal moves list for all active pieces of the chess position is an object keyed by origin square, with members:
  * * * Piece on origin, useful for translating PCN to SAN for the position
  * * * Target square array, useful for translating PCN to SAN for the position
- * * * Common target squares of non-pawn same-type pieces as key to  Standard Algebraic Notation (SAN) disambiguation string value
+ * * * Common target squares of non-pawn same-type pieces as key to Standard Algebraic Notation (SAN) disambiguation string value
  * * The status of white and black sides for the position based on active color and legal moves. These status could be useful as chess clock captions.
  * * If the position is game termination, the game over reason is given.
  * @constructor
@@ -95,7 +94,7 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
   const ac = position.activeColor;
   const ca = position.castlingAvailability;
   const epts = position.enPassantTargetSquare;
-  const material = position.getMaterialSort();
+  const material = materialSort(ppd64, ac);
   const allAttacks = [];
   const checksAndAbsPins = allConstraints(ppd64, ac, material.oppActive);
   const legalMoves = {};
@@ -149,7 +148,7 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
   let moveCount = 0;
   let madeMoveMsg = "Move made";
   let hasMoveMsg = "Has move";
-  let white, black, gameOver;
+  let white, whiteIsNSF, black, blackIsNSF, gameOver;
 
   for (const [ origin ] of material.oppActive) {
     allAttacks.push(
@@ -245,10 +244,14 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
 
   if (ac === 'w') {
     white = hasMoveMsg;
+    whiteIsNSF = material.activeIsNSF;
     black = madeMoveMsg;
+    blackIsNSF = material.oppActiveIsNSF;
   } else {
     white = madeMoveMsg;
+    whiteIsNSF = material.oppActiveIsNSF;
     black = hasMoveMsg;
+    blackIsNSF = material.activeIsNSF;
   }
 
   if (hasMoveMsg === "checkmate") {
@@ -265,25 +268,26 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
 
   this.legalMoves = JSON.parse( JSON.stringify(legalMoves) );
   this.white = white;
+  this.whiteIsNSF = whiteIsNSF;
   this.black = black;
+  this.blackIsNSF = blackIsNSF;
   this.gameOver = gameOver;
 }
 
 PositionReport.prototype.toSAN = toSAN;
-PositionReport.prototype.toPCN = toPCN;
 
 /** Creates an object for tracking the progression of a chess game by storing
  * a sequence of moves in both pure coordinate notation (PCN) and the standard
  * algebraic notation (SAN) used in Portable Game Notation (PGN). Includes
- * an initial Position object by default and storage for repeatable positions.
+ * an initial Position object and initial legalmoves by default.
  * @constructor
  * @param {string} [pcnMoveSeqCsv] Comma-delimited sequence of moves in pure coordinate notation
  */
 function SequenceOfMoves(pcnMoveSeqCsv) {
   this.pcnMoveSeqCsv = (pcnMoveSeqCsv || '').toString();
-  this.initPosition = new Position;
-  this.repeatablePositions = [];
   this.pgnMovetextTokens = [];
+  this.initPosition = new Position;
+  this.initStatus = new PositionReport(new Position);
 }
 
 SequenceOfMoves.prototype.getMoveSeq = function csvToArray() {
@@ -291,21 +295,17 @@ SequenceOfMoves.prototype.getMoveSeq = function csvToArray() {
 };
 
 /** Provide a move in Pure Coordinate Notation (PCN) to increment the
- * move sequence. Call this setter then getCurPositionData() to advance one ply.
+ * move sequence. Call this setter then getCurGameStatus() to advance one ply.
  * @param {string} pcn a chess move in pure coordinate notation or a string such as "flag fall," "ff," "time," "resign," or "R" in place of PCN to indicate ending before the side that has the move makes a move.
  */
 SequenceOfMoves.prototype.setMoveSeq = function pushMove(pcn) {
   this.pcnMoveSeqCsv = this.getMoveSeq().concat([ pcn ]).join(',');
 };
 
-/** Use undoMove() then getCurPositionData() to go back one move.
+/** Use undoMove() then getCurGameStatus() to go back one move.
  */
 SequenceOfMoves.prototype.undoMove = function popMove() {
   this.pcnMoveSeqCsv = this.getMoveSeq().slice(0, -1).join(',');
-};
-
-SequenceOfMoves.prototype.fullmoveNumber = function halfTotal() {
-  return Math.ceil(this.getMoveSeq().length / 2);
 };
 
 /** Obtains all current position data. Also detects a game over status due to
@@ -313,25 +313,76 @@ SequenceOfMoves.prototype.fullmoveNumber = function halfTotal() {
  * opposed to depending on position alone (check/stalemate, dead position).
  * @returns {Object} either the relevant position data due to the last move that has been made (full FEN with legal moves, capture list, and black and white status, or full FEN with capture list, game over message, and white-n-black status) or just the game over message if the game does not end due to making a move.
  */
-SequenceOfMoves.prototype.getCurPositionData = function runMoves() {
+SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
+  const repeatables = [];
+  let pcnSeq = this.getMoveSeq();
   let position = this.initPosition;
-  let curMove, nonMove, positionData;
-  let legalMoves, white, black, gameOver, captures, gameTermMarker;
+  let status = this.initStatus;
+  let { legalMoves, white, whiteIsNSF, black, blackIsNSF, gameOver } = status;
+  let nonMove, san, tokens, captures, gameTermMarker;
 
-  for ( const move of this.getMoveSeq() ) {
+  for (const move of pcnSeq) {
     if ( nonMove = move.match(/^ff|flag fall|T|time|resign|R/i) ) {
       nonMove = nonMove[0];
+      this.undoMove(); // Don't want non-move to affect fullmove num.
+      pcnSeq = this.getMoveSeq();
       break;
     }
+
+    /* Add SAN for the move to be made */
+
+    san = status.toSAN(move);
+
+    if (white === "Has move") {
+      tokens = [
+        Math.ceil( (pcnSeq.indexOf(move) + 1) / 2 ),
+        '.',
+        san
+      ];
+    } else {
+      tokens = [ san ];
+    }
+
+    // Record repeatable position due to reversible move
+    if (san.match(/^[BKNQR]/) && san.match(/x/) == null &&
+      san.match(/[0O]/) == null) {
+        repeatables.push( String(position) );
+    } else {
+      repeatables = [];
+    }
+
+    // Make the move
     position = position.nextPosition(move);
-    curMove = move;
+
+    // Update status
+    status = new PositionReport(position);
+    ({ legalMoves, white, whiteIsNSF, black, blackIsNSF, gameOver } = status);
+
+    if ( [white, black].includes("check") ) {
+      tokens.splice(-1, 1, san + '+');
+    }
+
+    if ( [white, black].includes("checkmate") ) {
+      tokens.splice(-1, 1, san + '#');
+    }
+
+    this.pgnMovetextTokens.concat(tokens);
   }
 
-  if (nonMove) { // Position on loop break was proc'd last ply so D.R.Y.
+  // Full FEN
+  position = [ String(position), position.halfmoveClock,
+    Math.ceil(pcnSeq.length / 2)
+  ].join(' ');
+
+  // captured piece symbols
+  captures = position.getCapturesInUnicode();
+
+  if (nonMove) {
     const isResign = nonMove.match(/^r/i);
     const endName = isResign ? "Resignation:" : "Flag fall:";
-    const { oppActiveIsNSF } = position.getMaterialSort();
-    const oppACWord = position.activeColor === 'w' ? 'black' : 'white';
+    const activeColorIsWhite = position.activeColor === 'w';
+    const oppActiveIsNSF = activeColorIsWhite ? blackIsNSF : whiteIsNSF;
+    const oppACWord = activeColorIsWhite ? 'black' : 'white';
 
     if (isResign || oppActiveIsNSF === false) {
       gameOver = [ endName, oppACWord, "wins" ].join(' ');
@@ -343,58 +394,25 @@ SequenceOfMoves.prototype.getCurPositionData = function runMoves() {
 
     this.pgnMovetextTokens.push(gameTermMarker);
 
-    return JSON.parse( JSON.stringify({ gameOver }) );
+    return JSON.parse(JSON.stringify({
+      position, captures, white, black, gameOver
+    }));
   }
 
-  if ( position.halfmoveClock == 0 || curMove.match(/e([18])[cg]\1/) ) {
-    this.repeatablePositions = [ String(position) ];
-  } else { // reversible move
-    this.repeatablePositions.push( String(position) );
-  }
-
-  positionData = new PositionReport(position);
-  ({ legalMoves, white, black, gameOver } = positionData);
-
-  if (white === "check" || black === "check") {
-    this.pgnMovetextTokens[this.pgnMovetextTokens.length - 1] += '+';
-  }
-
-  if (white === "checkmate" || black === "checkmate") {
-    this.pgnMovetextTokens[this.pgnMovetextTokens.length - 1] += '#';
-  }
-
-  if (white === "Made move") {
-    this.pgnMovetextTokens.push(
-      this.fullmoveNumber(),
-      '.',
-      positionData.nSA(curMove)
-    );
-  } else {
-    this.pgnMovetextTokens.push( positionData.nSA(curMove) );
-  }
-
-  for (let i = 0, p, i2, i3; i < this.repeatablePositions.length; i++) {
-    if (this.repeatablePositions.length < 9) {
+  for (let i = 0, p, i2, i3; i < repeatables.length; i++) {
+    if (repeatables.length < 9) {
       break;
     }
 
-    p = this.repeatablePositions[i];
-    i2 = this.repeatablePositions.slice(i + 1).indexOf(p); // look ahead
-    i3 = this.repeatablePositions.slice(i + 1).lastIndexOf(p); // look further
+    p = repeatables[i];
+    i2 = repeatables.slice(i + 1).indexOf(p); // look ahead
+    i3 = repeatables.slice(i + 1).lastIndexOf(p); // look further
 
     if (i2 > -1 && i3 > i2) {
       gameOver = "Draw: three-fold rep."
       break;
     }
   }
-
-  // captured piece symbols
-  captures = position.getCapturesInUnicode();
-
-  // Full FEN
-  position = [ String(position),
-    position.halfmoveClock, this.fullmoveNumber()
-  ].join(' ');
 
   if (gameOver) {
     gameTermMarker = gameOver.match(/^b/i) ? "0-1" : '';
@@ -445,22 +463,17 @@ PGNSevenTagRoster.prototype.toString = function printPGN(movetext) {
 	  ].join(' '));
 	}
 
-	return tags.join(']\n[') + '\n\n' + (movetext || '');
+	return tags.join(']\n[') + '\n\n' + movetext + '\n';
 };
 
 /** CHESS ENGINE, for now, returns random move in pure coordinate notation.
- * @param {*} legalMoves an object in which keys are algebraic notation for
+ * @param {Object} legalMoves an object in which keys are algebraic notation for
  * origin squares and the values are objects keyed with at least "pieceOnOrg"
  * for a value of the FEN piece on origin square and "targetSquare" for a value
  * of an array of legal move target squares in algebraic notation.
 */
 function cpuPlay(legalMoves) {
   const origins = Object.keys(legalMoves);
-
-  if ( origins.every(s => legalMoves[s].targetSquares.length === 0) ) {
-    return "cpu checkmated or stalemate";
-  }
-
   const moveable = origins.filter(s => legalMoves[s].targetSquares.length);
   const selectedOrigin = moveable[
     Math.floor( moveable.length * Math.random() )
@@ -474,12 +487,10 @@ function cpuPlay(legalMoves) {
   return selectedOrigin + selectedTarget + promotion;
 }
 
-export default { Position, PositionReport,
-  SequenceOfMoves, PGNSevenTagRoster, cpuPlay
+export default { Position, PositionReport, SequenceOfMoves, PGNSevenTagRoster,
+  cpuPlay, movePiece, raysAndNearestNotOnRay, targetsTruncAfter1stPc,
+  materialSort, allConstraints, targetsTruncAfterCaptureOrBeforeActive, toSAN
 };
-
-/* LEGAL MOVE GENERATION: THE FOLLOWING FUNCTIONS
-ARE USED IN THE METHODS OF POSITION */
 
 /** Piece placement data expansion to be used with rank-descending list of
  * all algebraic notations.
@@ -777,16 +788,16 @@ function targetsTruncAfter1stPc(raysPlus) {
 }
 
 /**
- * Separates the length 64 piece placement data array into Maps of active color and opposite color pieces in FEN and counts pieces to see if there is insufficient material to checkmate. For binding to a Position object with FEN field properties.
+ * Separates the length 64 piece placement data array into Maps of active color and opposite color pieces in FEN and counts pieces to see if there is insufficient material to checkmate.
+ * @param {Array} ppd64 board representation as array build from expanded PPD
+ * @param {string} activeColor FEN field indicating the color of the side that has the move, a single char string 'w' for white or 'b' for black
  * @returns {Object}
  * * Map of active color pieces: each value is the PPD char of the piece on the square indicated by the key in alg. notation
  * * Map of pieces of the opposite of the active color: each value is the PPD char of the piece on the square indicated by the key in alg. notation
  * * Boolean value indicating whether active color side has insufficient material
  * * Boolean value indicating whether the side of the opposite of the active color has insufficient material
  */
-function materialSort() {
-  const ac = this.activeColor;
-  const ppd64 = expandReverse(this.piecePlacementData);
+function materialSort(ppd64, activeColor) {
   const active = new Map();
   const oppActive = new Map();
   const insufficient = [ 'b', 'n', 'bn', 'nb', 'nn' ];
@@ -796,7 +807,7 @@ function materialSort() {
   let materialInFEN = '';
 
   for (let i = 0; i < 64; i++) {
-    if (color(ppd64[i]) === ac) {
+    if (color(ppd64[i]) === activeColor) {
       active.set(an64[i], ppd64[i]);
 
       if (activeId == undefined) {
@@ -832,7 +843,7 @@ function materialSort() {
 
 /** Define target square lists for rays of check or absolute pin.
  * @param {string} ppd64 see expand()
- * @param {string} activeColor FEN field index 1
+ * @param {string} activeColor FEN field indicating the color of the side that has the move, a single char string 'w' for white or 'b' for black
  * @param {Map} oppActiveColorMaterial Map in which keys are origins of pieces of the color opposite the active color.
  * @returns a list of rays along which one piece checks opposite king, and a key-valued list of rays along which a piece is subject to absolute pin, and the origin of the pinned piece is the key.
 */
@@ -887,7 +898,7 @@ function allConstraints(ppd64, activeColor, oppActiveColorMaterial) {
  * single active color piece of the chess position. Legal move list is a flat
  * array of target square values. Origin and target square pieces also listed.
  * @param {Object} raysPlus key-valued object list of squares and pieces from origin to end of board grouped by direction
- * @param {string} activeColor
+ * @param {string} activeColor FEN field indicating the color of the side that has the move, a single char string 'w' for white or 'b' for black
  * @param {Object} constraint a flat array of target squares attacked by all pieces of the same color (produced by looping "targetsTruncAfter1stPc" over a material Map) or an object listing rays of check or absolute pin (see "allConstraints").
  * @param {Array} ppd64 see expand()
  * @param {string} specialMoveFieldOfFEN either en passant target square or castling availability
@@ -1022,6 +1033,7 @@ function toSAN(pcn) {
   const org = pcn.slice(0, 2);
   const tsq = pcn.slice(2, 4);
   const pro = pcn.slice(4);
+  console.log(pcn, org)
   const movingPiece = this.legalMoves[org].pieceOnOrg.toUpperCase();
   const tsqIdx = this.legalMoves[org].targetSquares.indexOf(tsq);
   const capturedPiece = this.legalMoves[org].piecesOnTS[tsqIdx];
@@ -1037,57 +1049,4 @@ function toSAN(pcn) {
   }
 
   return san;
-}
-
-/**
- * Translates FIDE-spec standard algebraic notation (SAN) to pure coordinate notation (PCN).
- * @param {string} san a chess move given in SAN
- * @returns {string} the given chess move in PCN
- */
-function toPCN(san) {
-  const groups = /([BKNPQR][a-h]?[1-8]?x?|[a-h]x|)([a-h][1-8])(=[BNQR])?/;
-  const [ , start, tsq, pro ] = san.match(groups);
-  const [ , orgFile ] = start.match(/([a-h])x/) || [ '', '' ];
-  const [ , orgPc, orgFileDA, orgRankDA, ] = start.match(
-    /([BKNPQR])([a-h]?)([1-8]?)x?/
-  ) || [ '', '', '' ];
-  const pawnMoveNoCap = start.length === 0;
-  let pcnOrg;
-
-  for (const org in this.legalMoves) {
-    // match piece char, confirm no disambiguation, match target square
-    pcnOrg = orgPc === this.legalMoves[org][pieceOnOrg];
-    pcnOrg &&= (orgFileDA + orgRankDA).length === 0;
-    pcnOrg &&= this.legalMoves[org].targetSquares.includes(tsq) || '';
-
-    if (pcnOrg) {
-      pcnOrg = org;
-      break;
-    }
-
-    // non-pawn no disambiguation test failed, try non-pawn w/disambiguation
-    pcnOrg = orgPc === this.legalMoves[org][pieceOnOrg];
-    pcnOrg &&= (orgFileDA + orgRankDA) === this.legalMoves[org][tsq];
-
-    if (pcnOrg) {
-      pcnOrg = org;
-      break;
-    }
-
-    /* all non-pawn tests failed, try pawn stuff */
-
-    if ( pawnMoveNoCap && this.legalMoves[org].pieceOnOrg.match(/p/i) &&
-      this.legalMoves[org].targetSquares.includes(tsq) ) {
-        pcnOrg = org;
-        break;
-    }
-
-    if (orgFile === org[0] && this.legalMoves[org].pieceOnOrg.match(/p/i) &&
-      this.legalMoves[org].targetSquares.includes(tsq)) {
-        pcnOrg = org;
-        break;
-    }
-  }
-
-  return pcnOrg + tsq + (pro ? pro.toLowerCase() : '');
 }
