@@ -62,7 +62,7 @@ Position.prototype.toString = function firstFour() {
 };
 
 Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
-  return this.capturesInFEN.map(s => {
+  return this.capturesInFEN.split('').map(s => {
     return {
       Q: '\u2655',
       R: '\u2656',
@@ -152,7 +152,7 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
 
   for (const [ origin ] of material.oppActive) {
     allAttacks.push(
-      targetsTruncAfter1stPc( raysAndNearestNotOnRay( origin, ppd64 ) )
+      ...targetsTruncAfter1stPc( raysAndNearestNotOnRay( origin, ppd64 ) )
     );
   }
 
@@ -314,10 +314,10 @@ SequenceOfMoves.prototype.undoMove = function popMove() {
  * @returns {Object} either the relevant position data due to the last move that has been made (full FEN with legal moves, capture list, and black and white status, or full FEN with capture list, game over message, and white-n-black status) or just the game over message if the game does not end due to making a move.
  */
 SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
-  const repeatables = [];
   let pcnSeq = this.getMoveSeq();
   let position = this.initPosition;
   let status = this.initStatus;
+  let repeatables = [];
   let { legalMoves, white, whiteIsNSF, black, blackIsNSF, gameOver } = status;
   let nonMove, san, tokens, captures, gameTermMarker;
 
@@ -366,16 +366,16 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
       tokens.splice(-1, 1, san + '#');
     }
 
-    this.pgnMovetextTokens.concat(tokens);
+    this.pgnMovetextTokens = this.pgnMovetextTokens.concat(tokens);
   }
+
+  // captured piece symbols
+  captures = position.getCapturesInUnicode();
 
   // Full FEN
   position = [ String(position), position.halfmoveClock,
     Math.ceil(pcnSeq.length / 2)
   ].join(' ');
-
-  // captured piece symbols
-  captures = position.getCapturesInUnicode();
 
   if (nonMove) {
     const isResign = nonMove.match(/^r/i);
@@ -415,8 +415,8 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
   }
 
   if (gameOver) {
-    gameTermMarker = gameOver.match(/^b/i) ? "0-1" : '';
-    gameTermMarker ||= gameOver.match(/^w/i) ? "1-0" : '';
+    gameTermMarker = gameOver.match(/b.+win/i) ? "0-1" : '';
+    gameTermMarker ||= gameOver.match(/w.+win/i) ? "1-0" : '';
     gameTermMarker ||= "1/2-1/2";
     this.pgnMovetextTokens.push(gameTermMarker);
     return JSON.parse(JSON.stringify({
@@ -487,10 +487,7 @@ function cpuPlay(legalMoves) {
   return selectedOrigin + selectedTarget + promotion;
 }
 
-export default { Position, PositionReport, SequenceOfMoves, PGNSevenTagRoster,
-  cpuPlay, movePiece, raysAndNearestNotOnRay, targetsTruncAfter1stPc,
-  materialSort, allConstraints, targetsTruncAfterCaptureOrBeforeActive, toSAN
-};
+export default { SequenceOfMoves, PGNSevenTagRoster, cpuPlay };
 
 /** Piece placement data expansion to be used with rank-descending list of
  * all algebraic notations.
@@ -525,6 +522,15 @@ function expandReverse(ppd) {
   ).split('');
 }
 
+const castlingSides = new Map();
+
+for (let i = 0; i < 6; i++) {
+  castlingSides.set(
+    [ 'h1', 'a1', 'h8', 'a8', 'e1', 'e8' ][i],
+    [ 'K', 'Q', 'k', 'q', 'KQ', 'kq' ][i]
+  );
+}
+
 /** Moves a piece on the piece placement data-based array representation of a
  * chessboard.
  * Requires binding to a Position object with first 5 fields of FEN and a string list
@@ -542,8 +548,7 @@ function movePiece(pcn) {
   const pcnOfCastlingRook = { e1g1: 'h1f1',
     e1c1: 'a1d1', e8g8: 'h8f8', e8c8: 'a8d8'
   }[pcn];
-  const castlingSides = new Map();
-  const kingOrRookEvent = pcn.match(/[aeh][18]/);
+  const kingOrRookEvent = pcn.match(/[aeh][18]/)?.[0];
   let capturesInFEN = this.capturesInFEN;
   let piecePlacementData = [];
   let activeColor = this.activeColor;
@@ -597,18 +602,9 @@ function movePiece(pcn) {
 
   activeColor = activeColor === 'w' ? 'b' : 'w';
 
-  for (let i = 0; i < 6; i++) {
-    castlingSides.set(
-      [ 'h1', 'a1', 'h8', 'a8', 'e1', 'e8' ][i],
-      [ 'K', 'Q', 'k', 'q', 'KQ', 'kq' ][i]
-    );
-  }
-
-  if (kingOrRookEvent) {
-    castlingAvailability = castlingAvailability.replace(
-      castlingSides.get(kingOrRookEvent), ''
-    );
-  }
+  castlingAvailability = castlingAvailability.replace(
+    castlingSides.get(kingOrRookEvent), ''
+  );
 
   if (castlingAvailability.length === 0) {
     castlingAvailability = "-";
@@ -798,6 +794,7 @@ function targetsTruncAfter1stPc(raysPlus) {
  * * Boolean value indicating whether the side of the opposite of the active color has insufficient material
  */
 function materialSort(ppd64, activeColor) {
+  const oppositeOfActiveColor = activeColor === 'w' ? 'b' : 'w';
   const active = new Map();
   const oppActive = new Map();
   const insufficient = [ 'b', 'n', 'bn', 'nb', 'nn' ];
@@ -813,7 +810,7 @@ function materialSort(ppd64, activeColor) {
       if (activeId == undefined) {
         activeId = an64[i];
       }
-    } else {
+    } else if (color(ppd64[i]) === oppositeOfActiveColor) {
       oppActive.set(an64[i], ppd64[i]);
     }
   }
@@ -873,18 +870,18 @@ function allConstraints(ppd64, activeColor, oppActiveColorMaterial) {
 
     for (let ray, pinSq, i = 0; i < m.length; i++) {
       // exclude attacked king's square in a copy of slides
-      ray = g.targetSquares[i].slice( 0, m[0].indexOf(m[3]) );
+      ray = g.targetSquares[i].slice( 0, m[i][0].indexOf(m[i][3]) );
 
-      if (m[2].length === 1) { // remove & save pinned piece's square
-        pinSq = ray.splice(m[0].indexOf(m[2]), 1)[0];
+      if (m[i][2]?.length === 1) { // remove & save pinned piece's square
+        pinSq = ray.splice(m[i][0].indexOf(m[i][2]), 1)[0];
       }
 
       // attacked king's allies may capture attacker on list's origin
       ray = [ origin ].concat(ray);
 
-      if (m[2].length === 1) {
+      if (m[i][2]?.length === 1) {
         absPins[pinSq] = ray; // sq. of pinned is pin slides key
-      } else if (m[1].length > 0 && m[2].length === 0) {
+      } else if (m[i][1]?.length > 0 && m[i][2]?.length === 0) {
         checks.push(ray);
       }
     }
@@ -980,7 +977,7 @@ function targetsTruncAfterCaptureOrBeforeActive( raysPlus, activeColor,
     targetSquares = targetSquares.filter(s => attackedSquares.indexOf(s) < 0);
 
     /* Add castling targets if available */
-    if ( ca.match(/k/i)[0].length > 0 &&
+    if ( ca.match(/k/i)?.[0].length > 0 &&
       targetSquares.includes('f' + initRank) &&
       ppd64[an64.indexOf('f' + initRank)] == 1 &&
       attackedSquares.indexOf('g' + initRank) < 0 &&
@@ -989,7 +986,7 @@ function targetsTruncAfterCaptureOrBeforeActive( raysPlus, activeColor,
       targetSquares.push('g' + initRank);
     }
 
-    if ( ca.match(/q/i)[0].length > 0 &&
+    if ( ca.match(/q/i)?.[0].length > 0 &&
       targetSquares.includes('d' + initRank) &&
       ppd64[an64.indexOf('d' + initRank)] == 1 &&
       attackedSquares.indexOf('c' + initRank) < 0 &&
@@ -1005,7 +1002,7 @@ function targetsTruncAfterCaptureOrBeforeActive( raysPlus, activeColor,
       });
     } else if ( Object.keys(constraint.absPins).includes(origin) ) {
       targetSquares = targetSquares.filter(s => {
-        return absPins[origin].includes(s);
+        return constraint.absPins[origin].includes(s);
       });
     }
   }
@@ -1033,7 +1030,6 @@ function toSAN(pcn) {
   const org = pcn.slice(0, 2);
   const tsq = pcn.slice(2, 4);
   const pro = pcn.slice(4);
-  console.log(pcn, org)
   const movingPiece = this.legalMoves[org].pieceOnOrg.toUpperCase();
   const tsqIdx = this.legalMoves[org].targetSquares.indexOf(tsq);
   const capturedPiece = this.legalMoves[org].piecesOnTS[tsqIdx];
