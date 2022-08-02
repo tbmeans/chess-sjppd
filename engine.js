@@ -1049,3 +1049,56 @@ function toSAN(pcn) {
 
   return san;
 }
+
+function chessRays(ppd, org) {
+  const ppd64 = ppd.split('/').reverse().join('').replace(
+    /[2-8]/g, match => '1'.repeat(match)
+  ).split('');
+
+  const grid = Array.from({length: 64}, (v, i) => {
+    return `${i % 8}` + `${(i - i % 8) / 8}`;
+  });
+
+  const board = grid.concat(ppd64).map(
+    (s, i, arr) => [ s, arr[i + 64] ?? '' ]
+  ).slice(0, 64);
+
+  const occupied = board.filter(sq => sq[1] != 1);
+
+  const gridify = sq => `${"abcdefgh".indexOf(sq[0])}` + (sq[1] - 1);
+
+  let distMap = [ gridify(org) ].concat( occupied.map(o => o[0]) );
+
+  distMap = distMap.map( (s, i, arr) => {
+    return `${s[0] - arr[0][0]}${s[1] - arr[0][1]}`.replace(
+      /(-?)(\d)(-?)(\d)/, (match, group1, group2, group3, group4) => {
+        if (group1 && group3) {
+          return group2 + group4;
+        }
+        if (group1 || group3) {
+          return '-' + group2 + group4;
+        }
+        return group2 + group4;
+      }
+    );
+  });
+
+  return distMap;
+
+  const chessify = coords => coords.map(p => {
+    return "abcdefgh"[ p[0] ] + "12345678"[ p[1] ];
+  });
+
+  const isRank = dist => dist % 10 === 0;
+  const isDiag = dist => dist / 11 > 0 && (dist / 11) % (dist / 11) === 0;
+  const isAnti = dist => dist / -11 > 0 && (dist / -11) % (dist / -11) === 0;
+  const isFile = dist => dist[0] === '-' ? dist[1] == 0 : dist[0] == 0;
+  const isNearestBetweenRays = dist => {
+    return Math.abs(dist) == 12 || Math.abs(dist) == 21;
+  };
+}
+
+/*
+let ppd = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+chessify([ '12' ])[0]
+*/
