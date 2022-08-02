@@ -36,20 +36,7 @@ let xpc = [
   "Move made",
   "checkmate",
   "Mate: white wins",
-  'PPppNpNnRpQn'.split('').map(s => {
-    return {
-      Q: '\u2655',
-      R: '\u2656',
-      B: '\u2657',
-      N: '\u2658',
-      P: '\u2659',
-      q: '\u265B',
-      r: '\u265C',
-      b: '\u265D',
-      n: '\u265E',
-      p: '\u265F'
-    }[s];
-  }),
+  'PPppNpNnRpQn',
   evergreen
 ];
 

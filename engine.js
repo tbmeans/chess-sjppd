@@ -75,7 +75,7 @@ Position.prototype.getCapturesInUnicode = function nFEToUnicode() {
       n: '\u265E',
       p: '\u265F'
     }[s];
-  });
+  }).join('');
 };
 
 /**
@@ -285,7 +285,6 @@ PositionReport.prototype.toSAN = toSAN;
  */
 function SequenceOfMoves(pcnMoveSeqCsv) {
   this.pcnMoveSeqCsv = (pcnMoveSeqCsv || '').toString();
-  this.pgnMovetextTokens = [];
   this.initPosition = new Position;
   this.initStatus = new PositionReport(new Position);
 }
@@ -317,9 +316,10 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
   let pcnSeq = this.getMoveSeq();
   let position = this.initPosition;
   let status = this.initStatus;
+  let allTokens = [];
   let repeatables = [];
   let { legalMoves, white, whiteIsNSF, black, blackIsNSF, gameOver } = status;
-  let nonMove, san, tokens, captures, gameTermMarker;
+  let nonMove, san, tokens, movetext, captures, gameTermMarker;
 
   for (const move of pcnSeq) {
     if ( nonMove = move.match(/^ff|flag fall|T|time|resign|R/i) ) {
@@ -366,11 +366,15 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
       tokens.splice(-1, 1, san + '#');
     }
 
-    this.pgnMovetextTokens = this.pgnMovetextTokens.concat(tokens);
+    allTokens = allTokens.concat(tokens);
+  }
+
+  if (nonMove == null && gameOver.length === 0) {
+    movetext = allTokens.join(' ').replace(/ (\.)/g, '$1');
   }
 
   // captured piece symbols
-  captures = position.getCapturesInUnicode();
+  captures = position.capturesInFEN;
 
   // Full FEN
   position = [ String(position), position.halfmoveClock,
@@ -380,7 +384,7 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
   if (nonMove) {
     const isResign = nonMove.match(/^r/i);
     const endName = isResign ? "Resignation:" : "Flag fall:";
-    const activeColorIsWhite = position.activeColor === 'w';
+    const activeColorIsWhite = position.split(' ')[1] === 'w';
     const oppActiveIsNSF = activeColorIsWhite ? blackIsNSF : whiteIsNSF;
     const oppACWord = activeColorIsWhite ? 'black' : 'white';
 
@@ -392,10 +396,11 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
       gameTermMarker = "1/2-1/2";
     }
 
-    this.pgnMovetextTokens.push(gameTermMarker);
+    allTokens.push([ gameTermMarker ]);
+    movetext = allTokens.join(' ').replace(/ (\.)/g, '$1');
 
     return JSON.parse(JSON.stringify({
-      position, captures, white, black, gameOver
+      position, movetext, captures, white, black, gameOver
     }));
   }
 
@@ -418,19 +423,17 @@ SequenceOfMoves.prototype.getCurGameStatus = function runMoves() {
     gameTermMarker = gameOver.match(/b.+win/i) ? "0-1" : '';
     gameTermMarker ||= gameOver.match(/w.+win/i) ? "1-0" : '';
     gameTermMarker ||= "1/2-1/2";
-    this.pgnMovetextTokens.push(gameTermMarker);
+    allTokens.push([ gameTermMarker ]);
+    movetext = allTokens.join(' ').replace(/ (\.)/g, '$1');
+
     return JSON.parse(JSON.stringify({
-      position, captures, white, black, gameOver
+      position, movetext, captures, white, black, gameOver
     }));
   }
 
   return JSON.parse(JSON.stringify({
-    position, captures, legalMoves, white, black
+    position, movetext, captures, legalMoves, white, black
   }));
-};
-
-SequenceOfMoves.prototype.getPGNMovetext = function printMovetext() {
-  return this.pgnMovetextTokens.join(' ').replace(/ (\.)/g, '$1');
 };
 
 /**
@@ -487,7 +490,7 @@ function cpuPlay(legalMoves) {
   return selectedOrigin + selectedTarget + promotion;
 }
 
-export default { SequenceOfMoves, PGNSevenTagRoster, cpuPlay };
+export default { Position, SequenceOfMoves, PGNSevenTagRoster, cpuPlay };
 
 /** Piece placement data expansion to be used with rank-descending list of
  * all algebraic notations.

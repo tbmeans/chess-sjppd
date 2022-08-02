@@ -4,7 +4,9 @@ import util from 'util';
 
 import engine from './engine.js';
 
-const { SequenceOfMoves, cpuPlay } = engine;
+const { Position, SequenceOfMoves, PGNSevenTagRoster, cpuPlay } = engine;
+
+const pgn = new PGNSevenTagRoster;
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -25,7 +27,7 @@ const orgChoice = {
   defaultMessage: "You selected a square with no piece, " +
   "a square on which is a piece with no moves, " +
   "or did not enter valid algebraic notation. " +
-  "Defaulting to the highest rank & left-most file piece with a move. " +
+  "A piece with a move will be selected for you. " +
   "Here are its moves:",
   confirmMessage: "You selected the %s on %s. Here are its moves:"
 };
@@ -43,21 +45,23 @@ const destChoice = {
   defaultMessage: "You did not select a legal move, " +
   "or did not enter valid algebraic notation. " +
   "A move will now be automatically made for you. Result: ",
-  confirmMessage: "You selected to move to %s. Result of ply:"
+  confirmMessage: "You selected to move to %s. Result of your move:"
 };
 
 (async function gameLoop() {
   let choice = await question(sideChoice.question);
   let wbMatch = choice.match(/^w|b/i);
   let selectedBlack;
-  let uWhite = 'user';
-  let uBlack = 'cpu';
-  let game;
-  let allMoves;
+  let white = 'user';
+  let black = 'cpu';
+  let game = new SequenceOfMoves;
+  let status = game.initStatus;
+  let position = game.initPosition;
   let nAMatch = s => s.match(/^[a-h][1-8]/);
-  let org = { ppdIdx: 52, nA: "e2", nFE: "P" };
+  let org = "e2";
   let selMoves;
-  let dest = { ppdIdx: 36, nA: "e4", nFE: "1" };
+  let tsq = "e4";
+  let pro = '';
 
   if (wbMatch == null) {
     console.log(sideChoice.defaultMessage);
@@ -67,89 +71,134 @@ const destChoice = {
   }
 
   if (selectedBlack) {
-    uWhite = 'cpu';
-    uBlack = 'user';
+    white = 'cpu';
+    black = 'user';
   }
+
+  pgn.white = white;
+  pgn.black = black;
 
   console.log(
     sideChoice.confirmMessage,
     selectedBlack ? 'Black' : 'White'
   );
 
-  game = new SequenceOfMoves;
-  game.initPosition.plot();
-  allMoves = game.initPosition.getAllMoves();
+  position.plot();
+  console.log("White: %s", status.white);
+  console.log("Black: N/A");
+  console.log();
 
-  if (uWhite === 'cpu') {
-    game.setMoveSeq( cpuPlay(allMoves) );
+  if (white === 'cpu') {
+    game.setMoveSeq(org + tsq);
+    status = game.getCurGameStatus();
     console.log("Computer moved:");
-
+    position = new Position(
+      ...status.position.split(' ').slice(0, 5),
+      status.captures
+    );
+    position.plot();
+    console.log( status.movetext );
+    console.log("White: %s", status.white);
+    console.log("Black: %s", status.black);
+    console.log();
   }
 
   for (;;) {
     console.log("Your turn.");
     choice = await question(orgChoice.question);
 
-    if (nAMatch(choice) == null ||
-    game.curPosition.movesByAN.get(choice).length === 0) {
-      console.log(orgChoice.defaultMessage);
-      org.ppdIdx = allMoves.map(o => o.length > 0).indexOf(true);
-      org.nA = game.curPosition.toAN(org.ppdIdx);
-      org.nFE = game.curPosition.ppd[org.ppdIdx];
-    } else {
-      org.ppdIdx = game.curPosition.toPpdIdx(choice);
-      org.nA = choice;
-      org.nFE = game.curPosition.ppd[org.ppdIdx];
-      console.log(orgChoice.confirmMessage, pieceNames[org.nFE], org.nA);
+    if ( choice.match(/^r/i) ) {
+      game.setMoveSeq(choice);
+      status = game.getCurGameStatus();
+      console.log("GAME OVER: \n\t%s\n", status.gameOver);
+      console.log( pgn.toString( status.movetext ) );
+      break;
     }
 
-    selMoves = allMoves[org.ppdIdx];
-    game.curPosition.graphLegalMoves(org.ppdIdx);
+    if (nAMatch(choice) == null || status.legalMoves[choice] == null ||
+      status.legalMoves[choice].targetSquares.length === 0) {
+        console.log(orgChoice.defaultMessage);
+        org = Object.keys(status.legalMoves)[
+          Object.values(status.legalMoves).map(o => {
+            return o.targetSquares.length > 0;
+          }).indexOf(true)
+        ];
+    } else {
+      org = choice;
+      console.log(
+        orgChoice.confirmMessage,
+        pieceNames[ status.legalMoves[org].pieceOnOrg ],
+        org
+      );
+    }
+
+    selMoves = status.legalMoves[org].targetSquares;
+    position.plot(org, selMoves);
     choice = await question(destChoice.question);
 
     if (nAMatch(choice) == null || selMoves.indexOf(choice) < 0) {
       console.log(destChoice.defaultMessage);
-      dest.ppdIdx = game.curPosition.toPpdIdx(selMoves[0]);
-      dest.nA = selMoves[0];
-      dest.nFE = game.curPosition.ppd[org.ppdIdx];
+      tsq = selMoves[0];
     } else {
-      console.log(orgChoice.confirmMessage, choice);
-      dest.ppdIdx = game.curPosition.toPpdIdx(choice);
-      dest.nA = choice;
-      dest.nFE = game.curPosition.ppd[org.ppdIdx];
+      console.log(destChoice.confirmMessage, choice);
+      tsq = choice;
     }
 
-    allMoves = makeMove(false, game, org, dest, "Q");
+    if (status.legalMoves[org].pieceOnOrg === 'P' && tsq[1] == 8 ||
+      status.legalMoves[org].pieceOnOrg === 'p' && tsq[1] == 1) {
+        console.log("Pawn was automatically promoted to queen.");
+        pro = 'q';
+    }
 
-    if (game.endName.length > 0) {
-      console.log("GAME OVER: %s", game.endName);
-      // display pgn option here
+    game.setMoveSeq(org + tsq + pro);
+    status = game.getCurGameStatus();
+    position = new Position(
+      ...status.position.split(' ').slice(0, 5),
+      status.captures
+    );
+    position.plot();
+
+    if (status.hasOwnProperty('gameOver') === false) {
+      console.log( status.movetext );
+    }
+
+    console.log( position.getCapturesInUnicode() );
+    console.log("White: %s", status.white);
+    console.log("Black: %s", status.black);
+    console.log();
+
+    if (status.gameOver) {
+      console.log("GAME OVER: \n\t%s", status.gameOver);
+      pgn.toString( status.movetext );
       break;
     }
 
-    allMoves = makeMove( true, game, ...cpuPlay(game.curPosition) );
+    // consider "await" on a promise in which settimeout is run
 
-    if (game.endName.length > 0) {
-      console.log("GAME OVER: %s", game.endName);
-      // display pgn option here
+    game.setMoveSeq( cpuPlay(status.legalMoves) );
+    status = game.getCurGameStatus();
+    console.log("Computer moved:");
+    position = new Position(
+      ...status.position.split(' ').slice(0, 5),
+      status.captures
+    );
+    position.plot();
+
+    if (status.hasOwnProperty('gameOver') === false) {
+      console.log( status.movetext );
+    }
+
+    console.log( position.getCapturesInUnicode() );
+    console.log("White: %s", status.white);
+    console.log("Black: %s", status.black);
+    console.log();
+
+    if (status.gameOver) {
+      console.log("GAME OVER: \n\t%s", status.gameOver);
+      pgn.toString( status.movetext );
       break;
     }
   }
 
   rl.close();
-
-  function makeMove(usingEngine, game, ...moveParams) {
-    game.curMove = new ChessMove(...moveParams);
-
-    if (usingEngine) {
-      console.log("Computer moved:");
-    } else {
-      console.log("Result of your move:");
-    }
-
-    game.curPosition.sjpdGraph('.'.repeat(64), game.curPosition.ppd);
-    // option here: display if in check, also maybe list movetext token
-    // for black it'll be #... token
-    return JSON.parse(game.curPosition.allMovesStr);
-  }
 })();
