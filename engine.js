@@ -1070,35 +1070,75 @@ function chessRays(ppd, org) {
   let distMap = [ gridify(org) ].concat( occupied.map(o => o[0]) );
 
   distMap = distMap.map( (s, i, arr) => {
-    return `${s[0] - arr[0][0]}${s[1] - arr[0][1]}`.replace(
-      /(-?)(\d)(-?)(\d)/, (match, group1, group2, group3, group4) => {
-        if (group1 && group3) {
-          return group2 + group4;
-        }
-        if (group1 || group3) {
-          return '-' + group2 + group4;
-        }
-        return group2 + group4;
-      }
-    );
-  });
+    return `${s[0] - arr[0][0]}${s[1] - arr[0][1]}`;
+  }).slice(1);
 
-  return distMap;
+  let rayStop = distMap.filter(s => s.match(/-/) == null && s[0] == 0);
+
+  /* new isRays by azimuth
+  const isN = dist => dist.match(/-/) == null && dist[0] == 0;
+  const isNE = dist => dist.match(/-/) == null && dist % 11 === 0;
+  const isE = dist => dist.match(/-/) == null && dist % 10 === 0;
+  const isSE = dist => dist[1] === '-' && dist.replace(/-/g, '') % 11 === 0;
+  const isS = dist => dist[1] === '-' && dist[0] == 0;
+  const isSW = dist => {
+    return (dist[0] === '-' && dist[2] === '-' &&
+      dist.replace(/-/g, '') % 11 === 0
+    );
+  };
+  const isW = dist => dist[0] === '-' && dist.replace(/-/g, '') % 10 === 0;
+  const isNW = dist => dist[0] === '-' && dist.replace(/-/g, '') % 11 === 0;
+  const isNearestBetweenRays = dist => {
+    return dist.replace(/-/g, '') == 12 || dist.replace(/-/g, '') == 21;
+  };
+  */
+
+  rayStop = [ gridify(org) ].concat(rayStop);
+
+  const addBack = (dist, i, map) => {
+    if (i === 0) {
+      return map[0];
+    }
+    const byDashes = dist.split('-');
+    const byDashesLast = byDashes.slice(-1)[0];
+    const distLast = dist.slice(-1);
+    let x, y;
+    if (byDashes[0].length === 0) {
+      x = map[0][0] - dist[1];
+    } else {
+      x = parseInt(map[0][0]) + parseInt(dist[0]);
+    }
+    if (byDashesLast.length === 1) {
+      y = map[0][1] - byDashesLast;
+    } else {
+      y = parseInt(map[0][1]) + parseInt(distLast) ;
+    }
+    return `${x}${y}`;
+  };
 
   const chessify = coords => coords.map(p => {
     return "abcdefgh"[ p[0] ] + "12345678"[ p[1] ];
   });
 
-  const isRank = dist => dist % 10 === 0;
-  const isDiag = dist => dist / 11 > 0 && (dist / 11) % (dist / 11) === 0;
-  const isAnti = dist => dist / -11 > 0 && (dist / -11) % (dist / -11) === 0;
-  const isFile = dist => dist[0] === '-' ? dist[1] == 0 : dist[0] == 0;
-  const isNearestBetweenRays = dist => {
-    return Math.abs(dist) == 12 || Math.abs(dist) == 21;
-  };
-}
+  rayStop = chessify( rayStop.map(addBack) ); // this lists origin and the stop, not just stop
 
-/*
-let ppd = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-chessify([ '12' ])[0]
-*/
+  // lastly(?) need something to write fill-in squares between org and stop
+  // oh yeah and function needs a flag about whether to keep the stop,
+  // like are we listing attacks, moves, etc.
+  // oh yeah and this as its coded is listing all pieces not a stop.
+  // so figure out how to express nearest in array, or maybe just slice off last item
+  // if 2 more items than org, before filling in empties.
+  // if attacks and one of the pieces is king, stop at king not nearest, to pick up pins
+  // so pins and checks will be with attacks, but be careful not to bin past pin
+  // when binning attacked squares.
+
+  /*
+and there even needs to be consideration of what's on org as to decide which directions to use and how far out to go
+for one-square-sliders we really don't need an occupied matrix
+  */
+  return [
+    occupied,
+    distMap,
+    rayStop
+  ];
+}
