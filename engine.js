@@ -13,11 +13,13 @@ const an64TopDown = Array.from({length: 64}, (v, i) => {
   return "abcdefgh"[i % 8] + (8 - (i - i % 8) / 8);
 });
 
-/** Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece
+/**
+ * Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece
  * placement data, in which capital letters indicate white pieces and
- * lowercase indicates black pieces. Returns single-char string "w" or "b"
+ * lowercase indicates black pieces.
  *
  * @param {string} s string expression of a chess piece in FEN
+ * @returns {string} single-char string "w" or "b"
  */
 const color = s => {
   if ( s.match(/^[BKNPQR]/) ) {
@@ -1050,95 +1052,157 @@ function toSAN(pcn) {
   return san;
 }
 
-function chessRays(ppd, org) {
-  const ppd64 = ppd.split('/').reverse().join('').replace(
-    /[2-8]/g, match => '1'.repeat(match)
-  ).split('');
+/**
+ * Each square of the chessboard is assigned an integer whose tens place is
+ * the zero-based index to the square's rank in "12345678" and whose ones
+ * place is the zero-based index to the square's file in "abcdefgh". The order
+ * of integers in this list is equivalent to a list of all possible algebraic
+ * notation listed file a to h and rank ascending.
+ */
+ const grid = Object.freeze( Array.from({length: 78}, (v, i) => i).filter(x => {
+  return String(x).match(/[0-7]$|[1-7][0-7]/);
+}) );
 
-  const grid = Array.from({length: 64}, (v, i) => {
-    return `${i % 8}` + `${(i - i % 8) / 8}`;
-  });
+/**
+ * Converts chess algebraic notation into an integer whose digits represent file and rank.
+ * @param {string} sq algebraic notation for a chess square
+ * @returns {number} integer min 0 max 77 whose tens place digit is the zero-based index of given square's rank in "12345678" and whose ones place digit is the zero-based index of given square's file in "abcdefgh"
+ */
+const gridify = sq => 10 * (sq[1] - 1) + "abcdefgh".indexOf(sq[0]);
 
-  const board = grid.concat(ppd64).map(
-    (s, i, arr) => [ s, arr[i + 64] ?? '' ]
-  ).slice(0, 64);
+/**
+ * Inverse of the gridify function
+ * @param {Array} coords an array of integers, each whose tens place digit and ones place digit are zero-based indices of rank and file in "12345678" and "abcdefgh", resp.
+ * @returns {Array} each double-index integer is converted into its equivalent algebraic notation.
+ */
+const chessify = coords => {
+  return Object.freeze(
+    coords.map(x => "abcdefgh"[x % 10] + "12345678"[(x - x % 10) / 10])
+  );
+};
 
-  const occupied = board.filter(sq => sq[1] != 1);
+/**
+ * Alternative form of piece placement data for printing a text representation of a chessboard to console
+ * @param {string} ppd piece placement data substring from the Forsyth-Edwards Notation (FEN) expression of chess position
+ * @returns {Array} FEN piece placement data without rank delimiters and with digits greater than 1 replaced by a string of 1s of length equal to digit, for a sequence of 64 single character strings representing either a piece on a square or an empty square
+ */
+ const expand_ver3 = ppd => {
+  return Object.freeze(
+    ppd.replace( /\d/g, m => '1'.repeat(m) ).split('/').join('').split('')
+  );
+};
 
-  const gridify = sq => `${"abcdefgh".indexOf(sq[0])}` + (sq[1] - 1);
+/**
+ * Alternative form of piece placement data to better represent a board of moveable pieces. The placement is re-arranged into rank-ascending order to match y-ascending Cartesian coordinate lists.
+ * @param {string} ppd piece placement data substring from the Forsyth-Edwards Notation (FEN) expression of chess position
+ * @returns {Array} FEN piece placement data, ranks re-listed from 1st to 8th, rank delimiters removed, and digits greater than 1 replaced by a string of 1s of length equal to digit, for a sequence of 64 single character strings representing either a piece on a square or an empty square
+ */
+const expandReverse_ver3 = ppd => {
+  return Object.freeze(ppd.replace( /\d/g, m => '1'.repeat(m) ).split('/').map(
+    (rank, i, ranks) => ranks[7 - i]
+  ).join('').split(''));
+};
 
-  let distMap = [ gridify(org) ].concat( occupied.map(o => o[0]) );
+/**
+ * Get the piece in FEN on the square indicated by the given algebraic notation for a given piece arrangement
+ * @param {string} sq Algebraic notation of a chessboard square
+ * @param {Array|string} ppd64 FEN piece placement data undelimited and expanded to 64 characters via changing digits greater than 1 into a string of ones
+ * @returns {string} the character in the PPD position corresponding to the given algebraic notation
+ */
+const pieceOnSquare = (sq, ppd) => {
+  return expandReverse_ver3(ppd)["abcdefgh".indexOf(sq[0]) + 8 * (sq[1] - 1)];
+};
 
-  distMap = distMap.map( (s, i, arr) => {
-    return `${s[0] - arr[0][0]}${s[1] - arr[0][1]}`;
-  }).slice(1);
+/**
+ * Chessmove data matrix from which one can inspect distance, direction, and piece collision of moves from a given origin and board arrangement.
+ * @param {string} org algebraic notation of the origin square of the move
+ * @param {string} ppd FEN piece placement data
+ * @returns {Array} The data produced is a concatenation of three 64-element lists: first the double-index grid ints of the algebraic notation of all 64 squares in a-to-h rank-ascending order (0 for bottom left corner, 64 top right corner) followed by the difference of each rank-ascending square's grid int and the grid int of the given origin, lastly the 64 piece placement data notations of the piece or lack thereof on each square, rank-ascending. Therefore access a square's grid int by index from 0 to 64, inspect the corresponding square's direction and distance from origin by index + 64, and corresponding square's piece occupancy by index + 128. The key of direction and distance indicated by grid int differences is
+ * * 0 for the origin,
+ * * +/-1 for 1 square right/left on the origin's rank,
+ * * +/-10 for 1 square up/down on the origin's file,
+ * * +/-11 for 1 square up/down the main diagonal of the origin,
+ * * +/-9 for 1 square up/down the anti-diagonal of the origin,
+ * * +/-12, +/-21, +/-8, and +/-19 for the squares nearest the origin but not on any rank, file, or anti/diag.
+ */
+const moveMatrix = (org, ppd) => {
+  return Object.freeze(
+    grid.concat( grid.map( x => x - gridify(org) ) ).concat( expandReverse_ver3(ppd) )
+  );
+}
 
-  let rayStop = distMap.filter(s => s.match(/-/) == null && s[0] == 0);
+/**
+ * Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece placement data, in which capital letters indicate white pieces and lowercase indicates black pieces.
+ * @param {string} s string expression of a chess piece in FEN
+ * @returns {string} single-char string "w" or "b"
+ */
+ const color_ver3 = s => {
+  if ( s.match(/^[BKNPQR]/) ) {
+    return 'w';
+  }
+  if ( s.match(/^[bknpqr]/) ) {
+    return 'b';
+  }
+};
 
-  /* new isRays by azimuth
-  const isN = dist => dist.match(/-/) == null && dist[0] == 0;
-  const isNE = dist => dist.match(/-/) == null && dist % 11 === 0;
-  const isE = dist => dist.match(/-/) == null && dist % 10 === 0;
-  const isSE = dist => dist[1] === '-' && dist.replace(/-/g, '') % 11 === 0;
-  const isS = dist => dist[1] === '-' && dist[0] == 0;
-  const isSW = dist => {
-    return (dist[0] === '-' && dist[2] === '-' &&
-      dist.replace(/-/g, '') % 11 === 0
-    );
-  };
-  const isW = dist => dist[0] === '-' && dist.replace(/-/g, '') % 10 === 0;
-  const isNW = dist => dist[0] === '-' && dist.replace(/-/g, '') % 11 === 0;
-  const isNearestBetweenRays = dist => {
-    return dist.replace(/-/g, '') == 12 || dist.replace(/-/g, '') == 21;
-  };
-  */
+/**
+ * Legal move generation phase 1: determine range of motion
+ * @param {string} org origin square of piece to be moved
+ * @param {string} ppd FEN piece placement data
+ * @param {string} ac FEN active color, a single char w or b
+ * @param {string} ca FEN castling availability
+ * @param {string} epts FEN en passant target square
+ * @returns {Array} key-value pair of origin square for the key and object with piece on org and legal target squares for the value
+ */
+function targetSquares(org, ppd, ac, ca, epts) {
+  const pieceOnOrg = pieceOnSquare(org, ppd);
+  const moves = moveMatrix(org, ppd);
+  const opp = ac === 'w' ? 'b' : 'w';
 
-  rayStop = [ gridify(org) ].concat(rayStop);
+  if (pieceOnOrg == 1) {
+    return [ org, { pieceOnOrg, targetSquares: [] } ];
+  }
 
-  const addBack = (dist, i, map) => {
-    if (i === 0) {
-      return map[0];
-    }
-    const byDashes = dist.split('-');
-    const byDashesLast = byDashes.slice(-1)[0];
-    const distLast = dist.slice(-1);
-    let x, y;
-    if (byDashes[0].length === 0) {
-      x = map[0][0] - dist[1];
-    } else {
-      x = parseInt(map[0][0]) + parseInt(dist[0]);
-    }
-    if (byDashesLast.length === 1) {
-      y = map[0][1] - byDashesLast;
-    } else {
-      y = parseInt(map[0][1]) + parseInt(distLast) ;
-    }
-    return `${x}${y}`;
-  };
+  // could this be elevated to a standalone function just for pawns, and just curry call here?
+  if (pieceOnOrg.match(/p/i) && color_ver3(pieceOnOrg) === ac) {
+    const squares = Object.freeze(moves.filter( (x, i, data) => {
+      const sign = color_ver3(pieceOnOrg) === 'w' ? 1 : -1;
+      const initRank = color_ver3(pieceOnOrg) === 'w' ? 2 : 7;
+      const fromInit = Object.freeze(
+        [ 9, 10, 11, 20 ].map(x => sign * x)
+      );
+      const fromAfterInit = Object.freeze(
+        [ 9, 10, 11 ].map(x => sign * x)
+      );
+      const directions = org[1] == initRank ? fromInit : fromAfterInit;
+      if (i < 64) {
+        return directions.includes(data[i + 64]);
+      }
+      if (i > 127) {
+        return directions.includes(data[i - 64]);
+      }
+      return directions.includes(x);
+    }));
 
-  const chessify = coords => coords.map(p => {
-    return "abcdefgh"[ p[0] ] + "12345678"[ p[1] ];
-  });
+    const targets = Object.freeze(squares.filter( (x, i, data) => {
+      const len = data.length;
+      const pushIsClear = (i, dist) => {
+        return data[i + len / 3] === dist && data[i + 2 * len / 3] == 1;
+      };
+      const sign = color_ver3(pieceOnOrg) === 'w' ? 1 : -1;
+      const diags = Object.freeze( [ 9, 11 ].map(x => sign * x) );
 
-  rayStop = chessify( rayStop.map(addBack) ); // this lists origin and the stop, not just stop
+      return ( pushIsClear(i, sign * 20) &&
+        pushIsClear(i - sign * 2, sign * 10) ||
+        pushIsClear(i, sign * 10) || diags.includes(data[i + len / 3]) &&
+        color_ver3(data[i + 2 * len / 3]) === opp || x === gridify(epts)
+      );
+    }));
 
-  // lastly(?) need something to write fill-in squares between org and stop
-  // oh yeah and function needs a flag about whether to keep the stop,
-  // like are we listing attacks, moves, etc.
-  // oh yeah and this as its coded is listing all pieces not a stop.
-  // so figure out how to express nearest in array, or maybe just slice off last item
-  // if 2 more items than org, before filling in empties.
-  // if attacks and one of the pieces is king, stop at king not nearest, to pick up pins
-  // so pins and checks will be with attacks, but be careful not to bin past pin
-  // when binning attacked squares.
+    const targetSquares = chessify(targets);
 
-  /*
-and there even needs to be consideration of what's on org as to decide which directions to use and how far out to go
-for one-square-sliders we really don't need an occupied matrix
-  */
-  return [
-    occupied,
-    distMap,
-    rayStop
-  ];
+    return [ org, { pieceOnOrg, targetSquares } ];
+  } else {
+    // attacks only
+  }
 }
