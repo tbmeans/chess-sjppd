@@ -1,9 +1,12 @@
 /** Rank-ascending list of all algebraic notation:
  * a1, b1, c1, ... a2, b2, c2, ... a8, ..., h8
  */
-const an64 = Array.from({length: 64}, (v, i) => {
-  return "abcdefgh"[i % 8] + ( (i - i % 8) / 8 + 1 );
-});
+ const an64 = Object.freeze(
+  Array.from(
+    {length: 64},
+    (v, i) => "abcdefgh"[i % 8] + "12345678"[(i - i % 8) / 8]
+  )
+);
 
 /** Rank-descending list of all algebraic notation:
  * a8, ..., h8, ... , a1, ..., h8,
@@ -14,13 +17,10 @@ const an64TopDown = Array.from({length: 64}, (v, i) => {
 });
 
 /**
- * Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece
- * placement data, in which capital letters indicate white pieces and
- * lowercase indicates black pieces.
- *
- * @param {string} s string expression of a chess piece in FEN
- * @returns {string} single-char string "w" or "b"
- */
+* Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece placement data, in which capital letters indicate white pieces and lowercase indicates black pieces.
+* @param {string} s string expression of a chess piece in FEN
+* @returns {string} single-char string "w" or "b"
+*/
 const color = s => {
   if ( s.match(/^[BKNPQR]/) ) {
     return 'w';
@@ -494,39 +494,6 @@ function cpuPlay(legalMoves) {
 
 export default { Position, SequenceOfMoves, PGNSevenTagRoster, cpuPlay };
 
-/** Piece placement data expansion to be used with rank-descending list of
- * all algebraic notations.
- *
- * This is a top-down (rank 8 to 1) left-right (file a to h) representation
- * of the 64-square chessboard as an length 64 array of 1-char notations for
- * either a piece on a square or an empty square. Piece-on-square notation is
- * according to Forsyth-Edwards Notation (FEN) piece placement data, with a
- * single digit '1' representing an empty square.
- *
- * The expansion feature of this function takes digits greater than 1
- * in the piece placement data and converts them into a string of a
- * number of '1' chars equal to the digit greater than 1.
- *
- * @param {string} ppd piece placement data substring from the Forsyth-Edwards
- * Notation (FEN) expression of chess position.
- */
-function expand(ppd) {
-  return ppd.split('/').join('').replace(
-    /[2-8]/g, match => '1'.repeat(match)
-  ).split('');
-}
-
-/** Piece placement data expansion to be used with rank-ascending / bottom-up
- * list of all algebraic notations.
- * @param {string} ppd piece placement data substring from the Forsyth-Edwards
- * Notation (FEN) expression of chess position.
- */
-function expandReverse(ppd) {
-  return ppd.split('/').reverse().join('').replace(
-    /[2-8]/g, match => '1'.repeat(match)
-  ).split('');
-}
-
 const castlingSides = new Map();
 
 for (let i = 0; i < 6; i++) {
@@ -726,7 +693,7 @@ function raysAndNearestNotOnRay(origin, ppd64) {
  */
 function plot(origins, targets) {
   const idsOfTS = targets?.flat().map( s => an64TopDown.indexOf(s) );
-  const topDownPPD64 = expand(this.piecePlacementData);
+  const topDownPPD64 = expand(this.piecePlacementData, true);
   const spacedFiles = Array.from('abcdefgh').join('  ');
   let idsOfOrgs;
 
@@ -1053,156 +1020,412 @@ function toSAN(pcn) {
 }
 
 /**
- * Each square of the chessboard is assigned an integer whose tens place is
- * the zero-based index to the square's rank in "12345678" and whose ones
- * place is the zero-based index to the square's file in "abcdefgh". The order
- * of integers in this list is equivalent to a list of all possible algebraic
- * notation listed file a to h and rank ascending.
+ * Concatenation of a list of all square algebraic notation in rank-ascending order and the piece in FEN arrangement by square in rank-ascending order
+ * @param {string} ppd the piece placement data field of Forsyth-Edwards Notation (FEN)
+ * @returns {Array} an array first listing all squares' algebraic notation in rank-ascending order and the correpsoning piece on square with list index i is i + 64
  */
- const grid = Object.freeze( Array.from({length: 78}, (v, i) => i).filter(x => {
-  return String(x).match(/[0-7]$|[1-7][0-7]/);
-}) );
+const boardData = ppd => Object.freeze( an64.concat( expand(ppd) ) );
 
 /**
- * Converts chess algebraic notation into an integer whose digits represent file and rank.
- * @param {string} sq algebraic notation for a chess square
- * @returns {number} integer min 0 max 77 whose tens place digit is the zero-based index of given square's rank in "12345678" and whose ones place digit is the zero-based index of given square's file in "abcdefgh"
- */
-const gridify = sq => 10 * (sq[1] - 1) + "abcdefgh".indexOf(sq[0]);
+* Given a square, get the FEN of the piece on it.
+* @param {string} square algebraic notation of the square that you want to know the piece on
+* @param {Array} board a concatenation of a list of all square algebraic notation in rank-ascending order and the piece in FEN arrangement by square in rank-ascending order
+* @returns {string} the piece in FEN on the given square but if the square is not valid algebraic notation, the final element in the algebraic notation portion, "h8", is returned
+*/
+const getPieceOn = (square, board) => board[board.indexOf(square) + 64];
 
 /**
- * Inverse of the gridify function
- * @param {Array} coords an array of integers, each whose tens place digit and ones place digit are zero-based indices of rank and file in "12345678" and "abcdefgh", resp.
- * @returns {Array} each double-index integer is converted into its equivalent algebraic notation.
- */
-const chessify = coords => {
-  return Object.freeze(
-    coords.map(x => "abcdefgh"[x % 10] + "12345678"[(x - x % 10) / 10])
+* List algebraic notation of squares from start to end of board, up or down ranks
+* @param {string} n algebraic notation of a square to start the sequence
+* @param {boolean} isUp choice of whether the next goes up in rank or down
+* @returns {string} comma-separated list of algebraic notation in sequence after given start square to the chessboard boundary in the given rank direction--note that start square is not included, and if next in sequence does not exist due to boundary, returns empty string
+*/
+const fileSeq = (startSquare, isUp) => {
+  return an64.filter(n => {
+    return ( n[0] === startSquare[0] &&
+      (isUp ? n[1] > startSquare[1] : n[1] < startSquare[1])
+    );
+  }).map( (n, i, seq) => isUp ? n : seq[seq.length - 1 - i] ).join(',');
+};
+
+/**
+* List algebraic notation of squares from start to end of board, left or right across files
+* @param {string} n algebraic notation of a square to start the sequence
+* @param {boolean} isRt choice of whether the next goes right or left in file sequence by alpha
+* @returns comma-separated list of algebraic notation in sequence after given start square to the chessboard boundary in the given file direction--note that start square is not included, and if next in sequence does not exist due to boundary, returns empty string
+*/
+const rankSeq = (startSquare, isRt) => {
+  return an64.filter(n => {
+    const isAlphaRt = n.charCodeAt() > startSquare.charCodeAt();
+    const isAlphaLt = n[0] < startSquare[0];
+    return n[1] === startSquare[1] && (isRt ? isAlphaRt : isAlphaLt);
+  }).map( (n, i, seq) => isRt ? n : seq[seq.length - 1 - i] ).join(',');
+};
+
+/**
+* Step along a chessboard anti/diagonal
+* @param {string} n algebraic notation of a square to start the sequence
+* @param {boolean} isUp choice of whether the next goes up in rank or down
+* @param {boolean} isAnti choice of whether we want the next square on the anti-diagonal or diagonal
+* @returns {string} algebraic notation of the next square in sequence along a chessboard anti/diagonal as indicated by params
+*/
+const nextOnDiag = (n, isUp, isAnti) => {
+  return ( String.fromCharCode( n.charCodeAt() +
+    (isAnti ? -1 : 1) * (isUp ? 1 : -1) ) +
+    String.fromCharCode( n.charCodeAt(1) + (isUp ? 1 : -1) )
   );
 };
 
 /**
- * Alternative form of piece placement data for printing a text representation of a chessboard to console
- * @param {string} ppd piece placement data substring from the Forsyth-Edwards Notation (FEN) expression of chess position
- * @returns {Array} FEN piece placement data without rank delimiters and with digits greater than 1 replaced by a string of 1s of length equal to digit, for a sequence of 64 single character strings representing either a piece on a square or an empty square
- */
- const expand_ver3 = ppd => {
+* List the squares of any diagonal ray on chessboard in algebraic notation
+* @param {string} n algebraic notation of a square to start the sequence
+* @param {boolean} isUp choice of whether the sequence goes up or down in rank along the anti/diagonal
+* @param {boolean} isAnti choice of whether the sequence is on the anti-diagonal or diagonal
+* @returns comma-separated list of algebraic notation in sequence from given start square to the chessboard boundary in the given anti/diagonal direction--note that start square IS included and if sequence goes out of bounds beyond start square, the lone start square is returned back
+*/
+function diagSeq(n, isUp, isAnti) {
+  const fileStop = isUp && !isAnti || !isUp && isAnti ? 'h' : 'a';
+  const rankStop = isUp ? 8 : 1;
+  if (n.slice(-2, -1) === fileStop || n.slice(-1) == rankStop) {
+    return n;
+  }
+  return n + ',' + diagSeq(nextOnDiag(n, isUp, isAnti), isUp, isAnti);
+}
+
+/**
+* Get a set of all jump moves from a given square in a same order for listing slide rays
+* @param {string} centralSquare a square serving as the origin of a circle/cross of knight moves
+* @returns a comma-separated list of all jump target squares from a given origin, in clockwise order from north/zero-azimuth/12'o'clock, and if out of bounds in a direction, empty string between commas
+*/
+function jumpCircle(centralSquare) {
+  const diffs = Object.freeze(an64.map(n => {
+    const inFile = n.charCodeAt() - centralSquare.charCodeAt();
+    const inRank = n[1] - centralSquare[1];
+    return `${inFile}${inRank}`;
+  }));
+
+  return [ "12", "21", "2-1", "1-2", "-1-2", "-2-1", "-21", "-12" ].map(s => {
+    return an64[diffs.indexOf(s)] || '';
+  }).join(',');
+}
+
+/**
+* Produces an array form of piece placement data (PPD) from chess position in Forsyth-Edwards Notation (FEN), where each char in PPD, digits converted into '1' chars, is an array element. Features option to order rank-ascending, to best represent a board of moveable pieces, or rank-descending, for printing a text representation of a chessboard to console.
+* @param {string} ppd first space-delimited substring from FEN chess position
+* @param {boolean} isRankDescending choose order of PPD chars in array
+* @returns {Array} FEN piece placement data without rank delimiters and with digits greater than 1 replaced by a string of 1s of length equal to digit, for a sequence of 64 single character strings representing either a piece on a square or an empty square
+*/
+function expand(ppd, isRankDescending) {
+  const descendRank = ppdRank => ppdRank;
+  const ascendRank = (r, i, ranks) => ranks[7 - i];
+  const order = isRankDescending ? descendRank : ascendRank;
+  const onesString = match => '1'.repeat(match);
+
   return Object.freeze(
-    ppd.replace( /\d/g, m => '1'.repeat(m) ).split('/').join('').split('')
-  );
-};
-
-/**
- * Alternative form of piece placement data to better represent a board of moveable pieces. The placement is re-arranged into rank-ascending order to match y-ascending Cartesian coordinate lists.
- * @param {string} ppd piece placement data substring from the Forsyth-Edwards Notation (FEN) expression of chess position
- * @returns {Array} FEN piece placement data, ranks re-listed from 1st to 8th, rank delimiters removed, and digits greater than 1 replaced by a string of 1s of length equal to digit, for a sequence of 64 single character strings representing either a piece on a square or an empty square
- */
-const expandReverse_ver3 = ppd => {
-  return Object.freeze(ppd.replace( /\d/g, m => '1'.repeat(m) ).split('/').map(
-    (rank, i, ranks) => ranks[7 - i]
-  ).join('').split(''));
-};
-
-/**
- * Get the piece in FEN on the square indicated by the given algebraic notation for a given piece arrangement
- * @param {string} sq Algebraic notation of a chessboard square
- * @param {Array|string} ppd64 FEN piece placement data undelimited and expanded to 64 characters via changing digits greater than 1 into a string of ones
- * @returns {string} the character in the PPD position corresponding to the given algebraic notation
- */
-const pieceOnSquare = (sq, ppd) => {
-  return expandReverse_ver3(ppd)["abcdefgh".indexOf(sq[0]) + 8 * (sq[1] - 1)];
-};
-
-/**
- * Chessmove data matrix from which one can inspect distance, direction, and piece collision of moves from a given origin and board arrangement.
- * @param {string} org algebraic notation of the origin square of the move
- * @param {string} ppd FEN piece placement data
- * @returns {Array} The data produced is a concatenation of three 64-element lists: first the double-index grid ints of the algebraic notation of all 64 squares in a-to-h rank-ascending order (0 for bottom left corner, 64 top right corner) followed by the difference of each rank-ascending square's grid int and the grid int of the given origin, lastly the 64 piece placement data notations of the piece or lack thereof on each square, rank-ascending. Therefore access a square's grid int by index from 0 to 64, inspect the corresponding square's direction and distance from origin by index + 64, and corresponding square's piece occupancy by index + 128. The key of direction and distance indicated by grid int differences is
- * * 0 for the origin,
- * * +/-1 for 1 square right/left on the origin's rank,
- * * +/-10 for 1 square up/down on the origin's file,
- * * +/-11 for 1 square up/down the main diagonal of the origin,
- * * +/-9 for 1 square up/down the anti-diagonal of the origin,
- * * +/-12, +/-21, +/-8, and +/-19 for the squares nearest the origin but not on any rank, file, or anti/diag.
- */
-const moveMatrix = (org, ppd) => {
-  return Object.freeze(
-    grid.concat( grid.map( x => x - gridify(org) ) ).concat( expandReverse_ver3(ppd) )
+    ppd.replace(/\d/g, onesString).split('/').map(order).join('').split('')
   );
 }
 
 /**
- * Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece placement data, in which capital letters indicate white pieces and lowercase indicates black pieces.
- * @param {string} s string expression of a chess piece in FEN
- * @returns {string} single-char string "w" or "b"
- */
- const color_ver3 = s => {
-  if ( s.match(/^[BKNPQR]/) ) {
-    return 'w';
+* List rays of squares and single squares from which an origin is attacked.
+* @param {string} ppd the arrangement of pieces on board in FEN
+* @param {string} ac active color i.e. the color of pieces whose moves are constrained by attacks from opposite color pieces
+* @param {string} sq the square that is potentially attacked, in algebraic notation, assumed to be the king's square if not provided
+* @returns {Array} Returns an array of CSV strings of algebraic notation sequences: even-indexed strings are rays of sliding check on king, absolute pin of a piece to king, or attack on a non-king-occupied square; odd-indexed strings are single squares of jump attack; index 0 denotes the north direction on chessboard and following indices go clockwise around the compass points.
+*/
+function attackMap(ppd, ac, sq) {
+  const activeKing = ac === 'w' ? 'K' : 'k';
+  const enemyKnight = ac === 'w' ? 'n' : 'N';
+  const enemyPawn = ac === 'w' ? 'p' : 'P';
+
+  const chkPinWhiteOnRF = /^1*([BNPQR]?)1*[qr]/;
+  const chkPinBlackOnRF = /^1*([bnpqr]?)1*[QR]/;
+  const rankFileCheckOrPin = ac === 'w' ? chkPinWhiteOnRF : chkPinBlackOnRF;
+  const atkWhiteOnRF = /^1k|^1*[qr]/;
+  const atkBlackOnRF = /^1K|^1*[QR]/;
+  const rankFileAttack = ac === 'w' ? atkWhiteOnRF : atkBlackOnRF;
+  const rankfilePattern = sq == null ? rankFileCheckOrPin : rankFileAttack;
+
+  const chkPinWhFromAbove = /^p|^1*([BNPQR]?)1*[bq]/;
+  const chkPinBlFromAbove = /^1*([bnpqr]?)1*[BQ]/;
+  const chkPinDiagAbove = ac === 'w' ? chkPinWhFromAbove : chkPinBlFromAbove;
+  const atkWhiteFromAbove = /^p|^1k|^1*[bq]/;
+  const atkBlackFromAbove = /^1K|^1*[BQ]/;
+  const diagAtkFromAbove = ac === 'w' ? atkWhiteFromAbove : atkBlackFromAbove;
+  const diagAbovePattern = sq == null ? chkPinDiagAbove : diagAtkFromAbove;
+
+  const chkPinWhFromBelow = /^1*([BNPQR]?)1*[bq]/;
+  const chkPinBlFromBelow = /^P|^1*([bnpqr]?)1*[BQ]/;
+  const chkPinDiagBelow = ac === 'w' ? chkPinWhFromBelow : chkPinBlFromBelow;
+  const atkWhiteFromBelow = /^1k|^1*[bq]/;
+  const atkBlackFromBelow = /^P|^1K|^1*[BQ]/;
+  const diagAtkFromBelow = ac === 'w' ? atkWhiteFromBelow : atkBlackFromBelow;
+  const diagBelowPattern = sq == null ? chkPinDiagBelow : diagAtkFromBelow;
+
+  const board = boardData(ppd);
+
+  const org = sq == null ? board[board.indexOf(activeKing) - 64] : sq;
+
+  const rays = Object.freeze([
+    fileSeq(org, true),
+    diagSeq(org, true, false).slice(3),
+    rankSeq(org, true),
+    diagSeq(org, false, true).slice(3),
+    fileSeq(org, false),
+    diagSeq(org, false, false).slice(3),
+    rankSeq(org, false),
+    diagSeq(org, true, true).slice(3)
+  ]);
+
+  const pieces = Object.freeze(
+    rays.map(r => r.split(',').map( n => getPieceOn(n, board) ).join(''))
+  );
+
+  const pieceLineUps = Object.freeze(
+    pieces.map( (s, i) => {
+      switch(i) {
+        case 1:
+        case 7:
+          return s.match(diagAbovePattern);
+        case 3:
+        case 5:
+          return s.match(diagBelowPattern);
+        default:
+          return s.match(rankfilePattern);
+      }
+    })
+  );
+
+  const jumps = jumpCircle(org);
+
+  const piecesOnJumpSquares = Object.freeze(
+    jumps.split(',').map(n => {
+      return n.length > 0 ? getPieceOn(n, board) : n;
+    })
+  );
+
+  const areNoAttacks = (pieceLineUps.every(o => o == null) &&
+    piecesOnJumpSquares.indexOf(enemyKnight) === -1
+  );
+
+  if (areNoAttacks) {
+    return Object.freeze([]);
   }
-  if ( s.match(/^[bknpqr]/) ) {
-    return 'b';
+
+  const jumpAttacks = Object.freeze(
+    piecesOnJumpSquares.map( (s, i) => {
+      return s === enemyKnight ? jumps.split(',')[i] : '';
+    })
+  );
+
+  const chkAndAbsPinOrAtk = Object.freeze(pieceLineUps.map( (m, i) => {
+    if (m == null) {
+      return '';
+    }
+    if (m[0] === enemyPawn) { // check by pawn
+      return rays[i].slice(0, 2);
+    }
+    if (m[1].length === 0) { // empty string for pin match group
+      // absence of pin is check by bishop, rook, or queen
+      return rays[i].slice(0, 3 * m[0].length - 1);
+    }
+    // absolute pin case remains
+    if (sq != null) { // looking for attacks on given square
+      return '';
+      /* do not list pins if given square, i.e.,
+      list pins only when defaulting to king's square */
+    }
+    const idxOfPinned = pieceLineUps[i].indexOf(m[1]);
+    const pinnedOn = rays[i].split(',')[idxOfPinned];
+    const omitPinned = n => n !== pinnedOn;
+    return [
+      pinnedOn,
+      rays[i].split(',').slice(0, m[0].length).filter(omitPinned).join(',')
+    ].join(':');
+  }));
+
+  // interweave rays and jumps clockwise for 16 total directions mapped
+  return Object.freeze(
+    chkAndAbsPinOrAtk.concat(jumpAttacks).map( (o, i, data) => {
+      if (i === 0) {
+        return o;
+      }
+      if (i % 2) {
+        return data[data.length / 2 + i - Math.ceil(i / 2)];
+      }
+      if (i % 2 === 0) {
+        return data[i - Math.ceil(i / 2)];
+      }
+    })
+  );
+}
+
+function legalMoves(org, ppd, ac, ca, epts, constraint) {
+  const board = boardData(ppd);
+  const pieceOnOrg = getPieceOn(org, board);
+  const pieceIsWhite = color(pieceOnOrg) === 'w';
+  const oppColor = pieceIsWhite ? 'b' : 'w';
+
+  // failsafe, unnecessary if only run these on squares of active color pcs
+  if (ac === oppColor || pieceOnOrg == 1) {
+    return JSON.stringify( [ org, pieceOnOrg, '' ] );
   }
-};
+
+  const rays = Object.freeze([
+    fileSeq(org, true),
+    diagSeq(org, true, false).slice(3),
+    rankSeq(org, true),
+    diagSeq(org, false, true).slice(3),
+    fileSeq(org, false),
+    diagSeq(org, false, false).slice(3),
+    rankSeq(org, false),
+    diagSeq(org, true, true).slice(3)
+  ]);
+
+  const pushes = rays[pieceIsWhite ? 0 : 4].slice(0, 5);
+  const orgIsOnInitRank = org[1] == (pieceIsWhite ? 2 : 7);
+
+  const squares = Object.freeze(
+    {
+      b: rays.filter( (r, i) => i % 2 > 0 ),
+      k: rays.map( r => r.slice(0, 2) ),
+      n: jumpCircle(org).split(','),
+      p: [
+        pushes.slice(0, 2),
+        orgIsOnInitRank ? pushes.slice(3) : '',
+        rays[pieceIsWhite ? 7 : 5].slice(0, 2),
+        rays[pieceIsWhite ? 1 : 3].slice(0, 2)
+      ],
+      q: rays,
+      r: rays.filter( (r, i) => i % 2 === 0 )
+    }[pieceOnOrg.toLowerCase()]
+  );
+
+  const pieceLineups = Object.freeze(
+    squares.map(ray => {
+      return ray.split(',').map(n => {
+        const piece = getPieceOn(n, board);
+        /* ray or square is empty string for out of bounds which
+        causes getPieceOn to obtain algebraic notation from "board" */
+        return piece.length > 1 ? '' : piece;
+      }).join('');
+    })
+  );
+
+  const oneStop = pieceIsWhite ? /[1bnpqr]?/ : /[1BNPQR]?/;
+  const distance = pieceIsWhite ? /1*[bnpqr]?/ : /1*[BNPQR]?/;
+
+  const range = pieceLineups.map( (s, i, lineups) => {
+    if (s.length === 0) {
+      return 0;
+    }
+    if ( pieceOnOrg.match(/[kn]/i) ) {
+      return s.match(oneStop)[0].length;
+    }
+    if ( pieceOnOrg.match(/[bqr]/i) ) {
+      return s.match(distance)[0].length;
+    }
+    switch (i) {
+      case 0:
+        return s == 1 ? 1 : 0;
+      case 1:
+        return lineups[0] == 1 && s == 1 ? 1 : 0;
+      case 2:
+      case 3:
+        return color(s) === oppColor || squares[i] == epts ? 1 : 0;
+    }
+  });
+
+  // proper subset of csv w/o array-making, just count chars & commas
+  const targets = Object.freeze(
+    squares.map( (csv, i) => csv.slice(0, 3 * (range[i] || 1/3) - 1) )
+  );
+
+  /* Weed out of bounds results with a filter on positive length before
+  any splitting of CSVs, flattening, and/or attack mapping. */
+
+  // non-king pieces
+  if (pieceOnOrg.match(/k/i) == null) {
+    const allTargets = Object.freeze(
+      targets.filter(csv => csv.length > 0).map( csv => csv.split(',') ).flat()
+    );
+    const interposing = n => constraint.split(',').includes(n);
+    const limiter = constraint.length > 0 ? interposing : n => true;
+    const targetSquares = allTargets.filter(limiter).join(',');
+
+    return JSON.stringify( [ org, pieceOnOrg, targetSquares ] );
+  }
+
+  // here: king where each element of "targets" is only a single square
+  const unattacked = Object.freeze(
+    targets.filter(n => n.length > 0).filter(n => {
+      const list = attackMap(ppd, ac, n);
+      return (
+        list.length === 0 /* exit w/ empty array */ ||
+        list.every(s => s.length === 0)
+      );
+      /* latter condition: one or more potential attacks are blocked by
+      an ally piece in a config that would be an absolute pin if this was
+      king's square not one of king's targets for a move */
+    })
+  );
+
+  const activeSides = ac === 'w' ? /K?Q?/ : /k?q?$/;
+  const availableSides = ca.match(activeSides)[0];
+
+  if (availableSides.length === 0) {
+    const targetSquares = unattacked.join(',');
+    return JSON.stringify( [ org, pieceOnOrg, targetSquares ] );
+  }
+
+  const ltMove = pieceIsWhite ? 'd1' : 'd8';
+  const rtMove = pieceIsWhite ? 'f1' : 'f8';
+  const queenside = pieceIsWhite ? 'c1' : 'c8';
+  const kingside = pieceIsWhite ? 'g1' : 'g8';
+  const qsideAttacks = attackMap(ppd, ac, queenside);
+  const ksideAttacks = attackMap(ppd, ac, kingside);
+
+  const mayCastleQside = (
+    availableSides.match(/q/i) &&
+    unattacked.includes(ltMove) &&
+    getPieceOn(ltMove, board) == 1 &&
+    ( qsideAttacks.length === 0 ||
+      qsideAttacks.every(s => s.length === 0)
+    ) && getPieceOn(queenside) == 1
+  );
+
+  const mayCastleKside = (
+    availableSides.match(/k/i) &&
+    unattacked.includes(rtMove) &&
+    getPieceOn(rtMove, board) == 1 &&
+    ( ksideAttacks.length === 0 ||
+      ksideAttacks.every(s => s.length === 0)
+    ) && getPieceOn(kingside) == 1
+  );
+
+  const targetSquares = unattacked.concat(
+    mayCastleQside ? [ queenside ] : []
+  ).concat(
+    mayCastleKside ? [ kingside ] : []
+  ).join(',');
+
+  return JSON.stringify( [ org, pieceOnOrg, targetSquares ] );
+}
 
 /**
- * Legal move generation phase 1: determine range of motion
- * @param {string} org origin square of piece to be moved
- * @param {string} ppd FEN piece placement data
- * @param {string} ac FEN active color, a single char w or b
- * @param {string} ca FEN castling availability
- * @param {string} epts FEN en passant target square
- * @returns {Array} key-value pair of origin square for the key and object with piece on org and legal target squares for the value
- */
-function targetSquares(org, ppd, ac, ca, epts) {
-  const pieceOnOrg = pieceOnSquare(org, ppd);
-  const moves = moveMatrix(org, ppd);
-  const opp = ac === 'w' ? 'b' : 'w';
+* Legal move generation
+* @param {string} org origin square of piece to be moved
+* @param {string} ppd FEN piece placement data
+* @param {string} ac FEN active color, a single char w or b
+* @param {string} ca FEN castling availability
+* @param {string} epts FEN en passant target square
+* @returns {Array} origin square, piece on origin square, and target square csv
+*/
+function allMoves(ppd, ac, ca, epts) {
+  const origins = boardData(ppd).filter( (n, i, data) => {
+    return color(data[i + 64]) === ac;
+  });
 
-  if (pieceOnOrg == 1) {
-    return [ org, { pieceOnOrg, targetSquares: [] } ];
-  }
-
-  // could this be elevated to a standalone function just for pawns, and just curry call here?
-  if (pieceOnOrg.match(/p/i) && color_ver3(pieceOnOrg) === ac) {
-    const squares = Object.freeze(moves.filter( (x, i, data) => {
-      const sign = color_ver3(pieceOnOrg) === 'w' ? 1 : -1;
-      const initRank = color_ver3(pieceOnOrg) === 'w' ? 2 : 7;
-      const fromInit = Object.freeze(
-        [ 9, 10, 11, 20 ].map(x => sign * x)
-      );
-      const fromAfterInit = Object.freeze(
-        [ 9, 10, 11 ].map(x => sign * x)
-      );
-      const directions = org[1] == initRank ? fromInit : fromAfterInit;
-      if (i < 64) {
-        return directions.includes(data[i + 64]);
-      }
-      if (i > 127) {
-        return directions.includes(data[i - 64]);
-      }
-      return directions.includes(x);
-    }));
-
-    const targets = Object.freeze(squares.filter( (x, i, data) => {
-      const len = data.length;
-      const pushIsClear = (i, dist) => {
-        return data[i + len / 3] === dist && data[i + 2 * len / 3] == 1;
-      };
-      const sign = color_ver3(pieceOnOrg) === 'w' ? 1 : -1;
-      const diags = Object.freeze( [ 9, 11 ].map(x => sign * x) );
-
-      return ( pushIsClear(i, sign * 20) &&
-        pushIsClear(i - sign * 2, sign * 10) ||
-        pushIsClear(i, sign * 10) || diags.includes(data[i + len / 3]) &&
-        color_ver3(data[i + 2 * len / 3]) === opp || x === gridify(epts)
-      );
-    }));
-
-    const targetSquares = chessify(targets);
-
-    return [ org, { pieceOnOrg, targetSquares } ];
-  } else {
-    // attacks only
-  }
+  // HEY HEY IF MULTIPLE CHECKS THE KING CAN STILL HAVE MOVES, SO DON'T GO ALL TO ZERO MOVE COUNT FOR DBLCHK
+  return;
 }
