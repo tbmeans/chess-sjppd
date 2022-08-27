@@ -483,7 +483,7 @@ function allMoves(position) {
         );
       }
       return noMoves;
-    }).filter(n => n.length === 4).join(',');
+    }).filter(n => n.length > 2).join(',');
   }
 
   const originsOfPinned = Object.freeze( absPins.map(s => s.split(':')[0]) );
@@ -500,7 +500,7 @@ function allMoves(position) {
           /,/g, ',' + n
         )
       );
-    }).filter(n => n.length === 4).join(',');
+    }).filter(n => n.length > 2).join(',');
   }
 
   // no checks
@@ -518,7 +518,7 @@ function allMoves(position) {
         /,/g, ',' + n
       )
     );
-  }).filter(n => n.length === 4).join(',');
+  }).filter(n => n.length > 2).join(',');
 }
 
 export default {
