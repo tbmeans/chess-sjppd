@@ -476,14 +476,14 @@ function allMoves(position) {
     return origins.map(n => {
       const pc = getPieceOn(n, ppd64);
       if ( pc.match(/k/i) ) {
-        return (org +
+        return (n +
           legalMoves(n, ppd64, ac, ca, epts, '', true).replace(
-            /,/g, ',' + org
+            /,/g, ',' + n
           )
         );
       }
       return noMoves;
-    }).filter(n => n.length > 0).join(',');
+    }).filter(n => n.length === 4).join(',');
   }
 
   const originsOfPinned = Object.freeze( absPins.map(s => s.split(':')[0]) );
@@ -495,30 +495,30 @@ function allMoves(position) {
       if ( originsOfPinned.includes(n) ) {
         return noMoves;
       }
-      return (org +
+      return (n +
         legalMoves(n, ppd64, ac, ca, epts, checks[0], true).replace(
-          /,/g, ',' + org
+          /,/g, ',' + n
         )
       );
-    }).filter(n => n.length > 0).join(',');
+    }).filter(n => n.length === 4).join(',');
   }
 
   // no checks
   return origins.map(n => {
     if ( originsOfPinned.includes(n) ) {
       const idx = originsOfPinned.indexOf(n);
-      return (org +
+      return (n +
         legalMoves(n, ppd64, ac, ca, epts, absPinRays[idx]).replace(
-          /,/g, ',' + org
+          /,/g, ',' + n
         )
       );
     }
-    return (org +
+    return (n +
       legalMoves(n, ppd64, ac, ca, epts, '').replace(
-        /,/g, ',' + org
+        /,/g, ',' + n
       )
     );
-  }).filter(n => n.length > 0).join(',');
+  }).filter(n => n.length === 4).join(',');
 }
 
 export default {
