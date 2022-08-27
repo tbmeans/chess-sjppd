@@ -48,6 +48,17 @@ const destChoice = {
   confirmMessage: "You selected to move to %s. Result of your move:"
 };
 
+/** Rank-descending list of all algebraic notation:
+ * a8, ..., h8, ... , a1, ..., h8,
+ * which is the same order as FEN piece placement data.
+ */
+ const an64 = Object.freeze(
+  Array.from(
+    {length: 64},
+    (v, i) => "abcdefgh"[i % 8] + "87654321"[(i - i % 8) / 8]
+  )
+);
+
 (async function gameLoop() {
   let choice = await question(sideChoice.question);
   let wbMatch = choice.match(/^w|b/i);
@@ -202,3 +213,47 @@ const destChoice = {
 
   rl.close();
 })();
+
+/** Render a text chess board to console. Origin squares marked with "o" and target squares marked with an "X".
+ * @param {Array} [ppd64] sequence of 64 single character strings representing either a piece on a square or an empty square, in FEN
+ * @param {(string|Array)} [origins] a single origin square string in alebraic notation or array of such.
+ * @param {Array} [targets] the targetSquares from "rays and nearest not on rays" listing function.
+ */
+function plot(ppd64, origins, targets) { // REMEMBER TO RUN EXPAND WITH 2ND PARAM TRUE TO GET THE PPD64 TO PUT IN HERE
+  const idsOfTS = targets?.flat().map( s =>  an64.indexOf(s) );
+  const spacedFiles = Array.from('abcdefgh').join('  ');
+  let idsOfOrgs;
+
+  if ( Array.isArray(origins) ) {
+    idsOfOrgs = origins.map( s =>  an64.indexOf(s) );
+  } else { // a single origin alg. notation string was entered
+    idsOfOrgs = [ origins ].map( s =>  an64.indexOf(s) );
+  }
+
+  for (let rank, i = 0; i < 64; i++) {
+    if (i === 0) {
+      console.log();
+    }
+    if (i % 8 === 0) {
+      rank = '87654321'[i / 8] + '  ';
+    }
+    if (ppd64[i] != 1) {
+      rank += ppd64[i];
+    } else {
+      rank += '.';
+    }
+    if (idsOfTS != undefined && idsOfTS.includes(i)) {
+      rank += 'X ';
+    } else if ( idsOfOrgs != undefined && idsOfOrgs.includes(i) ) {
+      rank += 'o ';
+    } else {
+      rank += '  ';
+    }
+    if (i % 8 === 7) {
+      console.log(rank);
+    }
+    if (i + 1 === 64) {
+      console.log('   ' + spacedFiles + '\n');
+    }
+  }
+}
