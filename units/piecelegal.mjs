@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { expand, legalMoves } = engine;
+const { expand, legalTargetsOfAPiece } = engine;
 
 const listMoves = {
   rank1ClearAndBothWhiteCastlingMovesAvailable() {
@@ -62,7 +62,9 @@ function assertWithErrHandling(
   org, ppd64, ac, ca, epts, constraint, isCheck,
   expected
 ) {
-  const actual = legalMoves(org, ppd64, ac, ca, epts, constraint, isCheck);
+  const actual = legalTargetsOfAPiece(
+    org, ppd64, ac, ca, epts, constraint, isCheck
+  );
 
   const { message } = new assert.AssertionError({
     actual: actual,

@@ -20,25 +20,25 @@ const attackOnWhiteMap = [ 'g2:g3,g4,g5,g6,g7,g8' ].concat(
 const listAttacks = {
   evergreenGameMateHasOneCheckByAdjacentBishop() {
     assertWithErrHandling(
-      expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1"), 'b', null,
+      expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1"), "b", null,
       egMateAttackMap
     );
   },
   ifWhiteKingCouldMoveAfterEvergreenMateThenPinned() {
     assertWithErrHandling(
-      expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1"), 'w', null,
+      expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1"), "w", null,
       attackOnWhiteMap
     );
   },
   ifWhiteKingCouldMoveAfterEvergreenMateCornerMoveUnattacked() {
     assertWithErrHandling(
-      expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1"), 'w', 'h1',
+      expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1"), "w", 'h1',
       noAttacks
     );
   },
   ableToDetectDiagonalPinsWhenFirstSquareHasPinnedPiece() {
     assertWithErrHandling(
-      expand("8/1b6/8/3P4/4K3/8/8/8"), 'w', null,
+      expand("8/1b6/8/3P4/4K3/8/8/8"), "w", null,
       ( new Array(14) ).fill('').concat([ 'd5:c6,b7', '' ])
     );
   }

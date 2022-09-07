@@ -45,7 +45,7 @@ const listTargets = (await import('./targets.mjs')).default;
 for (const fn in listTargets) { console.log(fn); listTargets[fn](); }
 
 console.log()
-const listMoves = (await import('./legalmove.mjs')).default;
+const listMoves = (await import('./piecelegal.mjs')).default;
 for (const fn in listMoves) { console.log(fn); listMoves[fn](); }
 
 console.log()
@@ -53,3 +53,23 @@ const listAll = (await import('./allmove.mjs')).default;
 for (const fn in listAll) { console.log(fn); listAll[fn](); }
 
 console.log()
+const getNext = (await import('./nextpos.mjs')).default;
+for (const fn in getNext) { console.log(fn); getNext[fn](); }
+
+console.log()
+const listTbl = (await import('./disamtbl.mjs')).default;
+for (const fn in listTbl) { console.log(fn); listTbl[fn](); }
+
+console.log()
+const convert = (await import('./pcn2san.mjs')).default;
+for (const fn in convert) { console.log(fn); convert[fn](); }
+
+console.log()
+const report3 = (await import('./threefold.mjs')).default;
+for (const fn in report3) { console.log(fn); report3[fn](); }
+
+console.log()/*
+const listStat = (await import('./gstat.mjs')).default;
+for (const fn in listStat) { console.log(fn); listStat[fn](); }
+
+console.log()*/
