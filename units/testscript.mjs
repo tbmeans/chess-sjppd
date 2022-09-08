@@ -68,8 +68,16 @@ console.log()
 const report3 = (await import('./threefold.mjs')).default;
 for (const fn in report3) { console.log(fn); report3[fn](); }
 
-console.log()/*
+console.log()
+const listSeq = (await import('./seqpos.mjs')).default;
+for (const fn in listSeq) { console.log(fn); listSeq[fn](); }
+
+console.log()
+const listCaps = (await import('./seqcap.mjs')).default;
+for (const fn in listCaps) { console.log(fn); listCaps[fn](); }
+
+console.log()
 const listStat = (await import('./gstat.mjs')).default;
 for (const fn in listStat) { console.log(fn); listStat[fn](); }
 
-console.log()*/
+console.log()

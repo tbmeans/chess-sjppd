@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { expand, attackMap, allMoves,
+const { expand, attackMap, getLegalMoves,
   nextPosition, disambiguationTable, toSAN
 } = engine;
 
@@ -27,7 +27,7 @@ position = nextPosition(moveMade, position);
 
 attacksOnKing = attackMap(expand(ppd), ac);
 
-moves = allMoves( position, attacksOnKing );
+moves = getLegalMoves( position, attacksOnKing );
 
 const convert = {
   notedMovingPieceAndXMarkAndTargetSquareAndHashForEvergreenGameMateMove() {
