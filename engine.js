@@ -906,8 +906,8 @@ function getGameStatus(sequence, pgnSTR) {
   const pcnHalfmoves = sequence.replace(/,[RT]|D|,D/g, '');
 
   const positions = getSequenceOfPositions(
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    pcnHalfmoves
+    pcnHalfmoves,
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0"
   );
 
   const capturedList = nFEToUnicode( getSequenceOfCaptures(positions) );
@@ -922,7 +922,9 @@ function getGameStatus(sequence, pgnSTR) {
   );
 
   const legalMovesPerPosition = Object.freeze(
-    positions.split(',').map( (p, i) => getLegalMoves(p, attacks[i]) )
+    positions.split(',').map( (p, i) => {
+      return getLegalMoves(p, attacksPerPosition[i]);
+    })
   );
 
   const disambiguationPerPosition = Object.freeze(
@@ -1102,8 +1104,6 @@ export default {
   disambiguationTable,
   toSAN,
   is3foldRep,
-  printPGN,
   getSequenceOfPositions,
-  getMissingMaterial,
   getSequenceOfCaptures
 }
