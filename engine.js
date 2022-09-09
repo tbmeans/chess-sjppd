@@ -701,7 +701,7 @@ function disambiguationTable(legalMoves, ppd64) {
  * @param {string} pcn a chess move given in PCN
  * @param {Array} legalMoves a list of all legal moves in PCN
  * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
- * @param {Array} disambiguationTable strings in 'PCN,part-of-origin' format, each for one of all the moves whose origin needs to be at least partially specified in standard algebraic notation
+ * @param {string} disambiguationTable comma-separated strings of 5-6 chars, first 4 chars is always PCN, 5th and/or 6th the disambiguation portion of origin square and there is a string for each move whose origin needs to be at least partially specified in standard algebraic notation
  * @param {Array} nextAttacks output of {@link attackMap} called with the 64-length piece placement and active color resulting from {@link nextPosition} with inputs the {@link pcn} parameter here and the position corresponding to the {@link ppd64} parameter here.
  * @param {string} nextAllMoves output of {@link legalMoves} called with the output of {@link nextPosition}, "next" being after the position indicated by the {@link pcn} and {@link ppd64} parameters here
  * @returns SAN for given chess move
@@ -901,22 +901,45 @@ function getSequenceOfCaptures(positionSeq) {
  * @returns JSON data expressing the position and legal moves resulting from the last move in sequence, text indicators to distinguish which of white or black has the move and the other to have just made a move, scoresheet information such as the PGN movetext, symbols of captured pieces, and a text description of results if game is over; lastly a PGN plain text export of the game if the game is over
  */
 function getGameStatus(sequence, pgnSTR) {
+  const initPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0"
+
+  if (sequence.length === 0) {
+    const initLegalMoves = getLegalMoves(
+      initPosition,
+      attackMap(
+        expand(initPosition.split(' ')[0]),
+        initPosition.split(' ')[1]
+      )
+    );
+
+    return JSON.stringify({
+      position: init,
+      legalMoves: initLegalMoves,
+      white: "Has move",
+      black: "",
+      /* openingName, // to be written */
+      movetext: '',
+      capturedList: '',
+      gameover: '',
+      pgn: ''
+    });
+  }
+
   const endSignal = sequence.match(/[RT]$|D,D$/)?.[0];
 
   const pcnHalfmoves = sequence.replace(/,[RT]|D|,D/g, '');
 
-  const positions = getSequenceOfPositions(
-    pcnHalfmoves,
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0"
-  );
+  const positions = getSequenceOfPositions(pcnHalfmoves, initPosition);
 
   const capturedList = nFEToUnicode( getSequenceOfCaptures(positions) );
 
   const attacksPerPosition = Object.freeze(
     positions.split(',').map(p => {
-      return attackMap(
-        expand(p.split(' ')[0]),
-        p.split(' ')[1]
+      return Object.freeze(
+        attackMap(
+          expand(p.split(' ')[0]),
+          p.split(' ')[1]
+        )
       );
     })
   );
@@ -929,14 +952,17 @@ function getGameStatus(sequence, pgnSTR) {
 
   const disambiguationPerPosition = Object.freeze(
     legalMovesPerPosition.map( (lm, i) => {
-      return disambiguationTable( lm, expand(positions[i].split(' ')[0]) );
+      return disambiguationTable(
+        lm,
+        expand(positions.split(',')[i].split(' ')[0])
+      );
     })
   );
 
   const halfmoves = pcnHalfmoves.split(',').map( (pcn, i) => {
     return toSAN(
       pcn,
-      expand(positions[i].split(' ')[0]),
+      expand(positions.split(',')[i].split(' ')[0]),
       disambiguationPerPosition[i],
       attacksPerPosition[i + 1],
       legalMovesPerPosition[i + 1]
@@ -944,7 +970,7 @@ function getGameStatus(sequence, pgnSTR) {
   }).join(',');
 
   const fullmoveNumberIndicatorTokensMerged = Array.from(
-    {length: Math.ceil(pcnHalfmoves.length / 2)},
+    {length: Math.ceil(pcnHalfmoves.split(',').length / 2)},
     (v, k) => (k + 1) + '.'
   ).join(',');
 
