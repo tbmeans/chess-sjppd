@@ -1101,13 +1101,17 @@ function cpuPlay(legalMoves) {
   return selectedOrigin + selectedTarget + promotion;
 }
 
-export default {
-  /* The 3 functions to be used by the game UI */
+const ui = { PGNSevenTagRoster, getGameStatus, cpuPlay };
+
+const console = {
   PGNSevenTagRoster,
   getGameStatus,
-  cpuPlay,
-  /*
-  The following are exported only for unit testing. */
+  expand,
+  getPieceOn,
+  cpuPlay
+};
+
+const units = {
   expand,
   color,
 	fileSeq,
@@ -1130,6 +1134,12 @@ export default {
   disambiguationTable,
   toSAN,
   is3foldRep,
+  PGNSevenTagRoster,
   getSequenceOfPositions,
-  getSequenceOfCaptures
+  getSequenceOfCaptures,
+  getGameStatus
 }
+
+const engine = { ui, console, units }
+
+export default engine;
