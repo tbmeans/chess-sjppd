@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { expand, legalTargetsOfAPiece } = engine;
+const { expand, legalTargetsOfAPiece } = engine.units
 
 const listMoves = {
   rank1ClearAndBothWhiteCastlingMovesAvailable() {

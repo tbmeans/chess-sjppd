@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { diagSeq } = engine;
+const { diagSeq } = engine.units
 
 const listAng = {
   invalidNotationReturnsSame() {

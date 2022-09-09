@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { fileSeq } = engine;
+const { fileSeq } = engine.units
 
 const listFile = {
 	validNotationAndIsUpReturnsAscendingRay() {

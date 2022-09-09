@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { expand, raysFrom, jumpCircleAround, ppdSubset } = engine;
+const { expand, raysFrom, jumpCircleAround, ppdSubset } = engine.units
 
 const board = expand("1r3kr1/pbpBBp1p/1b3P2/8/8/2P2q2/P4PPP/3R2K1");
 

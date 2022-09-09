@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { nextOnDiag } = engine;
+const { nextOnDiag } = engine.units
 
 const showNext = {
 	validNotationAndIsUpGoesUR() {

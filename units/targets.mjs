@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { expand, targetsOfAPiece } = engine;
+const { expand, targetsOfAPiece } = engine.units
 
 const listTargets = {
   blackPawnOnRank4CanEPOrAdvanceAfterAdjacentWhiteDblPush() {

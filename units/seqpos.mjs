@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { getSequenceOfPositions } = engine;
+const { getSequenceOfPositions } = engine.units
 
 const listSeq = {
   twelveHalfmovesOfPositionListingIsNotTooMuchRecursion() {

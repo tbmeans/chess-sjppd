@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { nextPosition } = engine;
+const { nextPosition } = engine.units
 
 const getNext = {
   doublePawnPushSetsEnPassantTargetSquare() {

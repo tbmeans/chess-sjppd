@@ -8,7 +8,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { color } = engine;
+const { color } = engine.units
 
 const tellColor = {
   lowercaseBKNPQRReturnsLowercaseBForBlack() {

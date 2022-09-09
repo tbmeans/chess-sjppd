@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { PGNSevenTagRoster, getGameStatus } = engine;
+const { PGNSevenTagRoster, getGameStatus } = engine.units
 
 const egHalfmoves = "e2e4,e7e5,g1f3,b8c6,f1c4,f8c5,b2b4,c5b4,\
 c2c3,b4a5,d2d4,e5d4,e1g1,d4d3,d1b3,d8f6,e4e5,f6g6,f1e1,g8e7,c1a3,b7b5,b3b5,\

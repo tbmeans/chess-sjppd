@@ -5,7 +5,7 @@ import engine from '../engine.js'
 
 const {
   expand, jumpCircleAround, ppdSubset, trimToJumpEvent
-} = engine;
+} = engine.units
 
 const squares = jumpCircleAround('e4');
 

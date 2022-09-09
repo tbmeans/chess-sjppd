@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { getSequenceOfCaptures } = engine;
+const { getSequenceOfCaptures } = engine.units
 
 const listCaps = {
   twelveHalfmovesOfEvergreenGameAccumulated2WhitePawnsCaptured() {

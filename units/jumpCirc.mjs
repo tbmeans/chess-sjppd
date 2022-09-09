@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { jumpCircleAround } = engine;
+const { jumpCircleAround } = engine.units
 
 const listJumps = {
   invalidNotationReturnsEmpty() {

@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { expand, attackMap } = engine;
+const { expand, attackMap } = engine.units
 
 const noAttacks = ( new Array(16) ).fill('');
 

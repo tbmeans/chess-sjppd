@@ -5,7 +5,7 @@ import engine from '../engine.js'
 
 const {
   expand, raysFrom, rayAttackPatterns, ppdSubset, trimToRayEvent
-} = engine;
+} = engine.units
 
 const squares = raysFrom('e4');
 

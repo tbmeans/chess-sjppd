@@ -5,7 +5,7 @@ import engine from '../engine.js'
 
 const { expand, attackMap, getLegalMoves,
   nextPosition, disambiguationTable, toSAN
-} = engine;
+} = engine.units
 
 const moveMade = 'a3e7';
 

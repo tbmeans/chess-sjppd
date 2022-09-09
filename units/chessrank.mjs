@@ -3,7 +3,7 @@ import { captureRejectionSymbol } from 'events'
 
 import engine from '../engine.js'
 
-const { rankSeq } = engine;
+const { rankSeq } = engine.units
 
 const listRank = {
 	validNotationAndIsRtGoesRight() {
