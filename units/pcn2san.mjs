@@ -9,7 +9,7 @@ const { expand, attackMap, getLegalMoves,
 
 const moveMade = 'a3e7';
 
-let position = '1r3kr1/pbpBnp1p/1b3P2/8/8/B1P2q2/P4PPP/3R2K1 w - - 1';
+let position = '1r3kr1/pbpBnp1p/1b3P2/8/8/B1P2q2/P4PPP/3R2K1 w - - 4';
 
 let [ ppd, ac ] = position.split(' ');
 

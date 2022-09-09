@@ -24,6 +24,7 @@ const listStat = {
       {
         white: "Made move",
         black: "checkmate",
+        movetext: egSAN,
         gameover: "Mate: white wins"
       }
     );
@@ -37,6 +38,7 @@ function assertWithErrHandling(moveSeq, pgn, expected) {
   const actual = {
     white: fullStatus.white,
     black: fullStatus.black,
+    movetext: fullStatus.movetext,
     gameover: fullStatus.gameover
   };
 
@@ -58,10 +60,4 @@ function assertWithErrHandling(moveSeq, pgn, expected) {
     assert.deepEqual(err.operator, 'deepEqual');
     assert.deepEqual(err.generatedMessage, true);
   }
-
-  // rather than make date of pgn actual and expected match every run
-  console.log(
-    "The expected movetext is \n%s\nand the actual pgn is \n%s",
-    egSAN, fullStatus.pgn
-  );
 }
