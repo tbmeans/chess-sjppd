@@ -53,26 +53,11 @@ const destChoice = {
 };
 
 (async function gameLoop() {
-  const pgn = Object.freeze( new PGNSevenTagRoster );
-  const incrCSV = (csv, s) => [ csv, s ].join(',');
-  const updatedStatus = g => JSON.parse( getGameStatus(g, pgn) );
-  const nAMatch = s => s.match(/^[a-h][1-8]/);
-  const getOrgs = lm => lm.split(',').map( n => n.slice(0, 2) );
-  const pieceOn = (square, position) => {
-    return getPieceOn( square, expand(position.split(' ')[0]) );
-  };
   let choice = await question(sideChoice.question);
   let wbMatch = choice.match(/^w|b/i);
   let selectedBlack;
   let white = 'user';
   let black = 'cpu';
-  let game = '';
-  let status = updatedStatus(game);
-  let org = "e2";
-  let selMoves;
-  let tsq = "e4";
-  let pro = '';
-
 
   if (wbMatch == null) {
     console.log(sideChoice.defaultMessage);
@@ -86,13 +71,25 @@ const destChoice = {
     black = 'user';
   }
 
-  pgn.white = white;
-  pgn.black = black;
-
   console.log(
     sideChoice.confirmMessage,
     selectedBlack ? 'Black' : 'White'
   );
+
+  const pgn = Object.freeze( new PGNSevenTagRoster(white, black) );
+  const incrCSV = (csv, s) => csv.length ? [ csv, s ].join(',') : s;
+  const updatedStatus = g => JSON.parse( getGameStatus(g, pgn) );
+  const nAMatch = s => s.match(/^[a-h][1-8]/);
+  const getOrgs = lm => lm.split(',').map( n => n.slice(0, 2) );
+  const pieceOn = (square, position) => {
+    return getPieceOn( square, expand(position.split(' ')[0]) );
+  };
+  let game = '';
+  let status = updatedStatus(game);
+  let org = "e2";
+  let selMoves;
+  let tsq = "e4";
+  let pro = '';
 
   plot(status.position);
   console.log("White: %s\nBlack:", status.white);
@@ -156,6 +153,8 @@ const destChoice = {
     pieceOn(org, status.position) === 'p' && tsq[1] == 1) {
       console.log("Pawn was automatically promoted to queen.");
       pro = 'q';
+    } else {
+      pro = '';
     }
 
     game = incrCSV(game, org + tsq + pro);
@@ -177,7 +176,18 @@ const destChoice = {
       break;
     }
 
-    game = incrCSV( game, cpuPlay(status) );
+    choice = cpuPlay(status.legalMoves);
+    org = choice.slice(0, 2);
+    tsq = choice.slice(2);
+
+    if (pieceOn(org, status.position) === 'P' && tsq[1] == 8 ||
+    pieceOn(org, status.position) === 'p' && tsq[1] == 1) {
+      pro = 'q';
+    } else {
+      pro = '';
+    }
+
+    game = incrCSV( game, org + tsq + pro );
     status = updatedStatus(game);
     console.log(
       await new Promise(resolve => {
