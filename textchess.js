@@ -4,9 +4,13 @@ import util from 'util';
 
 import engine from './engine.js';
 
-const { Position, SequenceOfMoves, PGNSevenTagRoster, cpuPlay } = engine;
-
-const pgn = new PGNSevenTagRoster;
+const {
+  expand,
+  getPieceOn,
+  PGNSevenTagRoster,
+  getGameStatus,
+  cpuPlay
+} = engine.console;
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -48,31 +52,27 @@ const destChoice = {
   confirmMessage: "You selected to move to %s. Result of your move:"
 };
 
-/** Rank-descending list of all algebraic notation:
- * a8, ..., h8, ... , a1, ..., h8,
- * which is the same order as FEN piece placement data.
- */
- const an64 = Object.freeze(
-  Array.from(
-    {length: 64},
-    (v, i) => "abcdefgh"[i % 8] + "87654321"[(i - i % 8) / 8]
-  )
-);
-
 (async function gameLoop() {
+  const pgn = Object.freeze( new PGNSevenTagRoster );
+  const incrCSV = (csv, s) => [ csv, s ].join(',');
+  const updatedStatus = g => JSON.parse( getGameStatus(g, pgn) );
+  const nAMatch = s => s.match(/^[a-h][1-8]/);
+  const getOrgs = lm => lm.split(',').map( n => n.slice(0, 2) );
+  const pieceOn = (square, position) => {
+    return getPieceOn( square, expand(position.split(' ')[0]) );
+  };
   let choice = await question(sideChoice.question);
   let wbMatch = choice.match(/^w|b/i);
   let selectedBlack;
   let white = 'user';
   let black = 'cpu';
-  let game = new SequenceOfMoves;
-  let status = game.initStatus;
-  let position = game.initPosition;
-  let nAMatch = s => s.match(/^[a-h][1-8]/);
+  let game = '';
+  let status = updatedStatus(game);
   let org = "e2";
   let selMoves;
   let tsq = "e4";
   let pro = '';
+
 
   if (wbMatch == null) {
     console.log(sideChoice.defaultMessage);
@@ -94,20 +94,15 @@ const destChoice = {
     selectedBlack ? 'Black' : 'White'
   );
 
-  position.plot();
-  console.log("White: %s", status.white);
-  console.log("Black: N/A");
+  plot(status.position);
+  console.log("White: %s\nBlack:", status.white);
   console.log();
 
   if (white === 'cpu') {
-    game.setMoveSeq(org + tsq);
-    status = game.getCurGameStatus();
+    game = incrCSV(game, org + tsq);
+    status = updatedStatus(game);
     console.log("Computer moved:");
-    position = new Position(
-      ...status.position.split(' ').slice(0, 5),
-      status.captures
-    );
-    position.plot();
+    plot(status.position);
     console.log( status.movetext );
     console.log("White: %s", status.white);
     console.log("Black: %s", status.black);
@@ -119,32 +114,34 @@ const destChoice = {
     choice = await question(orgChoice.question);
 
     if ( choice.match(/^r/i) ) {
-      game.setMoveSeq(choice);
-      status = game.getCurGameStatus();
-      console.log("GAME OVER: \n\t%s\n", status.gameOver);
-      console.log( pgn.toString( status.movetext ) );
+      game = incrCSV(game, 'R');
+      status = updatedStatus(game);
+      console.log("GAME OVER\n\t%s\n", status.gameover);
+      console.log(status.pgn);
       break;
     }
 
-    if (nAMatch(choice) == null || status.legalMoves[choice] == null ||
-      status.legalMoves[choice].targetSquares.length === 0) {
+    if (nAMatch(choice) == null ||
+      getOrgs(status.legalMoves).indexOf(choice) < 0) {
         console.log(orgChoice.defaultMessage);
-        org = Object.keys(status.legalMoves)[
-          Object.values(status.legalMoves).map(o => {
-            return o.targetSquares.length > 0;
-          }).indexOf(true)
-        ];
+        org = status.legalMoves.split(',')[0];
     } else {
       org = choice;
       console.log(
         orgChoice.confirmMessage,
-        pieceNames[ status.legalMoves[org].pieceOnOrg ],
+        pieceNames[pieceOn(org, status.position)],
         org
       );
     }
 
-    selMoves = status.legalMoves[org].targetSquares;
-    position.plot(org, selMoves);
+    selMoves = status.legalMoves.split(',').filter(n => {
+      return n.slice(0, 2) === org;
+    }).map(n => {
+      return n.slice(2);
+    });
+
+    plot(status.position, org, selMoves);
+
     choice = await question(destChoice.question);
 
     if (nAMatch(choice) == null || selMoves.indexOf(choice) < 0) {
@@ -155,58 +152,57 @@ const destChoice = {
       tsq = choice;
     }
 
-    if (status.legalMoves[org].pieceOnOrg === 'P' && tsq[1] == 8 ||
-      status.legalMoves[org].pieceOnOrg === 'p' && tsq[1] == 1) {
-        console.log("Pawn was automatically promoted to queen.");
-        pro = 'q';
+    if (pieceOn(org, status.position) === 'P' && tsq[1] == 8 ||
+    pieceOn(org, status.position) === 'p' && tsq[1] == 1) {
+      console.log("Pawn was automatically promoted to queen.");
+      pro = 'q';
     }
 
-    game.setMoveSeq(org + tsq + pro);
-    status = game.getCurGameStatus();
-    position = new Position(
-      ...status.position.split(' ').slice(0, 5),
-      status.captures
-    );
-    position.plot();
+    game = incrCSV(game, org + tsq + pro);
+    status = updatedStatus(game);
+    plot(status.position);
 
-    if (status.hasOwnProperty('gameOver') === false) {
+    if (status.gameover.length === 0) {
       console.log( status.movetext );
     }
 
-    console.log( position.getCapturesInUnicode() );
+    console.log( status.capturedList );
     console.log("White: %s", status.white);
     console.log("Black: %s", status.black);
     console.log();
 
-    if (status.gameOver) {
-      console.log("GAME OVER: \n\t%s", status.gameOver);
-      pgn.toString( status.movetext );
+    if (status.gameover.length > 0) {
+      console.log("GAME OVER\n\t%s", status.gameover);
+      console.log(status.pgn);
       break;
     }
 
-    // consider "await" on a promise in which settimeout is run
-
-    game.setMoveSeq( cpuPlay(status.legalMoves) );
-    status = game.getCurGameStatus();
-    console.log("Computer moved:");
-    position = new Position(
-      ...status.position.split(' ').slice(0, 5),
-      status.captures
+    game = incrCSV( game, cpuPlay(status) );
+    status = updatedStatus(game);
+    console.log(
+      await new Promise(resolve => {
+        return setTimeout( () => resolve("Computer moved:"), 3000 );
+      })
+      /* This gives the illusion of the computer taking a few seconds to decide
+      on a move (it takes less than a second to process the computer's ply).
+      This delay is also to help the user keep up with the otherwise fast
+      scrolling-by of updated chessboards comprised of many lines of text to
+      visually scan. */
     );
-    position.plot();
+    plot(status.position);
 
-    if (status.hasOwnProperty('gameOver') === false) {
+    if (status.gameover.length === 0) {
       console.log( status.movetext );
     }
 
-    console.log( position.getCapturesInUnicode() );
+    console.log( status.capturedList );
     console.log("White: %s", status.white);
     console.log("Black: %s", status.black);
     console.log();
 
-    if (status.gameOver) {
-      console.log("GAME OVER: \n\t%s", status.gameOver);
-      pgn.toString( status.movetext );
+    if (status.gameover.length > 0) {
+      console.log("GAME OVER\n\t%s", status.gameover);
+      console.log(status.pgn);
       break;
     }
   }
@@ -215,11 +211,20 @@ const destChoice = {
 })();
 
 /** Render a text chess board to console. Origin squares marked with "o" and target squares marked with an "X".
- * @param {Array} [ppd64] sequence of 64 single character strings representing either a piece on a square or an empty square, in FEN
+ * @param {Array} [position] chess position in Forsyth-Edwards Notation (FEN) with at least the piece placement data (PPD) field
  * @param {(string|Array)} [origins] a single origin square string in alebraic notation or array of such.
  * @param {Array} [targets] the targetSquares from "rays and nearest not on rays" listing function.
  */
-function plot(ppd64, origins, targets) { // REMEMBER TO RUN EXPAND WITH 2ND PARAM TRUE TO GET THE PPD64 TO PUT IN HERE
+function plot(position, origins, targets) {
+  const an64 = Object.freeze(
+    Array.from(
+      {length: 64},
+      (v, i) => "abcdefgh"[i % 8] + "87654321"[(i - i % 8) / 8]
+    )
+    // List of all algebraic notation in the same order as FEN piece
+    // placement data: file-left-to-right, then descend one rank.
+  );
+  const ppd64 = expand(position.split(' ')[0], true);
   const idsOfTS = targets?.flat().map( s =>  an64.indexOf(s) );
   const spacedFiles = Array.from('abcdefgh').join('  ');
   let idsOfOrgs;
@@ -227,7 +232,7 @@ function plot(ppd64, origins, targets) { // REMEMBER TO RUN EXPAND WITH 2ND PARA
   if ( Array.isArray(origins) ) {
     idsOfOrgs = origins.map( s =>  an64.indexOf(s) );
   } else { // a single origin alg. notation string was entered
-    idsOfOrgs = [ origins ].map( s =>  an64.indexOf(s) );
+    idsOfOrgs = [ origins ].map( s => an64.indexOf(s) );
   }
 
   for (let rank, i = 0; i < 64; i++) {
