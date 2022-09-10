@@ -69,7 +69,8 @@ const color = s => {
  */
 const fileSeq = (startSquare, isUp) => {
   return an64.filter(n => {
-    return ( n[0] === startSquare[0] &&
+    return (
+      n[0] === startSquare[0] &&
       (isUp ? n[1] > startSquare[1] : n[1] < startSquare[1])
     );
   }).map( (n, i, seq) => isUp ? n : seq[seq.length - 1 - i] ).join(',');
@@ -83,9 +84,10 @@ const fileSeq = (startSquare, isUp) => {
  */
 const rankSeq = (startSquare, isRt) => {
   return an64.filter(n => {
-    const isAlphaRt = n.charCodeAt() > startSquare.charCodeAt();
-    const isAlphaLt = n[0] < startSquare[0];
-    return n[1] === startSquare[1] && (isRt ? isAlphaRt : isAlphaLt);
+    return (
+      n[1] === startSquare[1] &&
+      (isRt ? n > startSquare : n < startSquare)
+    );
   }).map( (n, i, seq) => isRt ? n : seq[seq.length - 1 - i] ).join(',');
 };
 
@@ -913,7 +915,7 @@ function getGameStatus(sequence, pgnSTR) {
     );
 
     return JSON.stringify({
-      position: init,
+      position: initPosition,
       legalMoves: initLegalMoves,
       white: "Has move",
       black: "",
@@ -1080,25 +1082,14 @@ function getGameStatus(sequence, pgnSTR) {
   });
 }
 
-/** CHESS ENGINE, for now, returns random move in pure coordinate notation.
- * @param {Object} legalMoves an object in which keys are algebraic notation for
- * origin squares and the values are objects keyed with at least "pieceOnOrg"
- * for a value of the FEN piece on origin square and "targetSquare" for a value
- * of an array of legal move target squares in algebraic notation.
+/** CHESS ENGINE, for now, random moves in Pure Coordinate Notation (PCN)
+ * @param {string} legalMoves comma-separated list of all moves that may be made in PCN
+ * @returns a randomly chosen move from a list of PCN
 */
 function cpuPlay(legalMoves) {
-  const origins = Object.keys(legalMoves);
-  const moveable = origins.filter(s => legalMoves[s].targetSquares.length);
-  const selectedOrigin = moveable[
-    Math.floor( moveable.length * Math.random() )
+  return legalMoves.split(',')[
+    Math.floor( legalMoves.split(',').length * Math.random() )
   ];
-  const choices = legalMoves[selectedOrigin].targetSquares;
-  const selectedTarget = choices[Math.floor( choices.length * Math.random() )];
-  let promotion = legalMoves[selectedOrigin].pieceOnOrg + selectedTarget[1];
-
-  promotion = promotion.match(/p1|P8/) ? 'q' : '';
-
-  return selectedOrigin + selectedTarget + promotion;
 }
 
 const ui = { PGNSevenTagRoster, getGameStatus, cpuPlay };
