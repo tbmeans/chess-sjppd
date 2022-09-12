@@ -266,18 +266,6 @@ function trimToRayEvent(piecesOnRaySquares, rayAttackPatterns) {
 }
 
 /**
- * Piece placement data mapping jump attacks
- * @param {Array} piecesOnJumpSquares subset of piece placement data, collecting all pieces that are a knight's jump away from an origin square
- * @param {string} enemyKnightFEN the FEN char of whichever color knight may attack given current active color
- * @returns PPD subset arranged the same as {@link piecesOnJumpSquares} but with empty strings wherever a knight does not occupy a jump target in addition to the empty strings indicating out of bounds, and so the only pieces listed are knights occupying a square from which said knight could jump to origin.
- */
-function trimToJumpEvent(piecesOnJumpSquares, enemyKnightFEN) {
-  return Object.freeze(piecesOnJumpSquares.map(s => {
-    return s === enemyKnightFEN ? s : '';
-  }));
-}
-
-/**
  * List rays of squares and single squares from which an origin is attacked.
  * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
  * @param {string} ac active color from FEN, a single char 'w' or 'b'
@@ -292,10 +280,9 @@ function attackMap(ppd64, ac, square) {
     ppdSubset(ppd64, rays),
     rayAttackPatterns(ac, square == null)
   );
-  const jumpAttacks = trimToJumpEvent(
-    ppdSubset(ppd64, jumps),
-    ac === 'w' ? 'n' : 'N'
-  );
+  const jumpAttacks = Object.freeze(ppdSubset(ppd64, jumps).map(s => {
+    return s === (ac === 'w' ? 'n' : 'N') ? s : '';
+  }));
 
   if (rayAttacks.every(o => o == null) &&
     jumpAttacks.indexOf(enemyKnight) === -1) {
@@ -1114,7 +1101,6 @@ const units = {
   rayAttackPatterns,
   ppdSubset,
   trimToRayEvent,
-  trimToJumpEvent,
   attackMap,
   targetsOfAPiece,
 	legalTargetsOfAPiece,
