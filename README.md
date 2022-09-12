@@ -1,7 +1,7 @@
 # Chess engine and legal move generator
 
 ## Intro
-The progression of a chess game is represented by an object containing a sequence of moves and an initial position expressed as the first four fields of Forsyth-Edwards notation (FEN). A rudimentary chess engine is provided for play vs the computer.
+Provides results of the user's choice of moves necessary to progress a chess game. A rudimentary chess engine is provided for play vs the computer.
 
 ## Progressing play
-Use the sequence of moves setter, entering a move in [Pure coordinate notation](https://www.chessprogramming.org/Algebraic_Chess_Notation#Pure_coordinate_notation) then use the current game status getter and inspect the returned object for game continuation or game termination.
+The accumulation of chess moves made by each side, expressed as a comma-separated list of [Pure coordinate notation (PCN)](https://www.chessprogramming.org/Algebraic_Chess_Notation#Pure_coordinate_notation) strings, and a template object for game data export in [Portable Game Notation (PGN)](https://ia802908.us.archive.org/26/items/pgn-standard-1994-03-12/PGN_standard_1994-03-12.txt) are to be entered into the "getGameStatus" function to produce the following information used to update a chess game user interface: position in Forsyth-Edwards notation (FEN), list of legal moves in PCN, who has the move, the scoresheet list of moves in standard algebraic notation, a list of captured pieces, and if the game is over, cause of game over and the filled-in PGN.
