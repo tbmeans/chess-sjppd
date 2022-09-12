@@ -1,5 +1,20 @@
 {
   "name": "chess-sjppd",
-  "version": "3.0.0",
-  "type": "module"
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Provides results of the user's choice of moves necessary to progress a chess game. A rudimentary chess engine is provided for play vs the computer.",
+  "scripts": {
+    "test": "node units/test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tbmeans/chess-sjppd.git"
+  },
+  "keywords": ["chess", "legal move generator"],
+  "author": "Timothy B. Means",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tbmeans/chess-sjppd/issues"
+  },
+  "homepage": "https://github.com/tbmeans/chess-sjppd"
 }
