@@ -906,7 +906,7 @@ function getGameStatus(sequence, pgnSTR) {
       legalMoves: initLegalMoves,
       white: "Has move",
       black: "",
-      /* openingName, // to be written */
+      openingName: '',
       movetext: '',
       capturedList: '',
       gameover: '',
@@ -1061,7 +1061,7 @@ function getGameStatus(sequence, pgnSTR) {
     legalMoves: resultingLegalMoves,
     white,
     black,
-    /* openingName, // to be written */
+    openingName: '',
     movetext,
     capturedList,
     gameover,
