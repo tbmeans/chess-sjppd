@@ -11,11 +11,11 @@ const an64 = Object.freeze(
 /**
  * An arrow function to be used as the callback of Array.prototype.map that will reverse the elements in a new array, avoiding Array.prototype.reverse's array mutation
  * @param {*} v dummy value
- * @param {Number} i dummy index
+ * @param {Number} k dummy index
  * @param {Array} o dummy object, represents the array on which Array.prototype.map is called, this function being the callback of map
  * @returns element as far from the end as the element indicated by dummy index is from the start
  */
-const reverse = (v, i, o) => o[o.length - 1 - i];
+const reverse = (v, k, o) => o[o.length - 1 - k];
 
 /**
  * Produces an array form of piece placement data (PPD) from chess position in Forsyth-Edwards Notation (FEN), where each char in PPD, digits converted into '1' chars, is an array element. Features option to order rank-ascending, to best represent a board of moveable pieces, or rank-descending, for printing a text representation of a chessboard to console.
@@ -1079,7 +1079,7 @@ function cpuPlay(legalMoves) {
   ];
 }
 
-const ui = { PGNSevenTagRoster, getGameStatus, cpuPlay };
+const ui = { PGNSevenTagRoster, getGameStatus, expand, cpuPlay };
 
 const console = {
   PGNSevenTagRoster,
