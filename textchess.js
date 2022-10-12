@@ -10,7 +10,7 @@ const {
   PGNSevenTagRoster,
   getGameStatus,
   cpuPlay
-} = engine.console;
+} = engine.ui;
 
 const rl = readline.createInterface({
   input: process.stdin,
