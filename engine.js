@@ -73,7 +73,7 @@ const fileSeq = (startSquare, isUp) => {
       n[0] === startSquare[0] &&
       (isUp ? n[1] > startSquare[1] : n[1] < startSquare[1])
     );
-  }).map( (n, i, seq) => isUp ? n : seq[seq.length - 1 - i] ).join(',');
+  }).map( (n, i, seq) => isUp ? n : seq[seq.length - 1 - i] ).join();
 };
 
 /**
@@ -88,7 +88,7 @@ const rankSeq = (startSquare, isRt) => {
       n[1] === startSquare[1] &&
       (isRt ? n > startSquare : n < startSquare)
     );
-  }).map( (n, i, seq) => isRt ? n : seq[seq.length - 1 - i] ).join(',');
+  }).map( (n, i, seq) => isRt ? n : seq[seq.length - 1 - i] ).join();
 };
 
 /**
@@ -99,9 +99,13 @@ const rankSeq = (startSquare, isRt) => {
  * @returns algebraic notation of the next square in sequence along a chessboard anti/diagonal as indicated by params
  */
 const nextOnDiag = (n, isUp, isAnti) => {
-  return ( String.fromCharCode( n.charCodeAt() +
-    (isAnti ? -1 : 1) * (isUp ? 1 : -1) ) +
-    String.fromCharCode( n.charCodeAt(1) + (isUp ? 1 : -1) )
+  return (
+    String.fromCharCode( /* next file */
+      n.charCodeAt() + (isAnti ? -1 : 1) * (isUp ? 1 : -1)
+    ) +
+    String.fromCharCode( /* next rank */
+      n.charCodeAt(1) + (isUp ? 1 : -1)
+    )
   );
 };
 
@@ -141,9 +145,12 @@ const nFEToUnicode = n => n.split('').map(s => charTable[s]).join('');
  function diagSeq(n, isUp, isAnti) {
   const fileStop = isUp && !isAnti || !isUp && isAnti ? 'h' : 'a';
   const rankStop = isUp ? 8 : 1;
-  if (n.slice(-2, -1) === fileStop || n.slice(-1) == rankStop ||
-    n.match(/[a-h][1-8]/) == null) {
-      return n;
+  if (
+    n.slice(-2, -1) === fileStop ||
+    n.slice(-1) == rankStop ||
+    n.match(/[a-h][1-8]/) == null
+  ) {
+    return n;
   }
   return n + ',' + diagSeq(nextOnDiag(n, isUp, isAnti), isUp, isAnti);
 }
@@ -311,7 +318,7 @@ function attackMap(ppd64, ac, square) {
 
     return [
       pinnedOn,
-      rays[i].split(',').slice(0, s.length).filter(omitPinned).join(',')
+      rays[i].split(',').slice(0, s.length).filter(omitPinned).join()
     ].join(':');
   }));
 
@@ -421,7 +428,7 @@ function targetsOfAPiece(origin, ppd64, epts) {
     const interposing = n => constraint.split(',').includes(n);
     const limiter = constraint.length > 0 ? interposing : n => true;
 
-    return allTargets.filter(limiter).join(',')
+    return allTargets.filter(limiter).join()
   }
 
   /* here: king, where each element of "targets" is only a single square */
@@ -435,7 +442,7 @@ function targetsOfAPiece(origin, ppd64, epts) {
   const availableSides = ca.match(activeSides)[0];
 
   if (isCheck || availableSides.length === 0) {
-    return unattacked.join(',');
+    return unattacked.join();
   }
 
   const ltMove = pieceIsWhite ? 'd1' : 'd8';
@@ -463,7 +470,7 @@ function targetsOfAPiece(origin, ppd64, epts) {
     mayCastleQside ? [ queenside ] : []
   ).concat(
     mayCastleKside ? [ kingside ] : []
-  ).join(',');
+  ).join();
 }
 
 /**
@@ -502,7 +509,7 @@ function getLegalMoves(position, attacksOnKing) {
         );
       }
       return noMoves;
-    }).filter(n => n.length > 2).join(',');
+    }).filter(n => n.length > 2).join();
   }
 
   const originsOfPinned = Object.freeze( absPins.map(s => s.split(':')[0]) );
@@ -519,7 +526,7 @@ function getLegalMoves(position, attacksOnKing) {
           /,/g, ',' + n
         )
       );
-    }).filter(n => n.length > 2).join(',');
+    }).filter(n => n.length > 2).join();
   }
 
   // no checks
@@ -534,7 +541,7 @@ function getLegalMoves(position, attacksOnKing) {
     return ( n +
       legalTargetsOfAPiece(n, ppd64, ac, ca, epts, '').replace( /,/g, ',' + n )
     );
-  } ).filter( n => n.length > 2 ).join(',');
+  } ).filter( n => n.length > 2 ).join();
 }
 
 /**
@@ -682,7 +689,7 @@ function disambiguationTable(legalMoves, ppd64) {
       }
       return pcn;
     }).filter(n => n.length > 4);
-  }).flat().join(',');
+  }).flat().join();
 }
 
 /**
@@ -781,7 +788,7 @@ function is3foldRep(positions) {
 function printPGN(pgnSTR, result, movetext) {
   const tagNames = Object.keys(pgnSTR).map(s => {
     return s[0].toUpperCase() + s.slice(1);
-  }).join(',');
+  }).join();
 
   const tagValues = Object.freeze(
     Object.values(pgnSTR).map( (s, i, values) => {
@@ -825,7 +832,7 @@ function getSequenceOfPositions(sequenceOfMoves, position, indexOfMove) {
       nextPosition(move, position),
       (indexOfMove ?? 0) + 1
     )
-  ].join(',');
+  ].join();
 }
 
 /**
@@ -863,8 +870,8 @@ function getSequenceOfCaptures(positionSeq) {
       getMaterialInFEN( p.split(' ')[0],
         p.split(' ')[1] === 'b'
       )
-    ].join(',');
-  }).join(',').split(',').slice(0, -1).join(',');
+    ].join();
+  }).join().split(',').slice(0, -1).join();
   /* Remove the 2nd material listed for last position because it is always
    unpaired due to no next position's material to compare it with. */
 
@@ -874,7 +881,7 @@ function getSequenceOfCaptures(positionSeq) {
         return getMissingMaterial(capturesAndOrMaterial, material);
       }
       return ( idxOfMaterial % 2 === 0 ?
-        [ capturesAndOrMaterial, material ].join(',') :
+        [ capturesAndOrMaterial, material ].join() :
         ( capturesAndOrMaterial.split(',')[0] +
           getMissingMaterial( capturesAndOrMaterial.split(',')[1], material )
         )
@@ -890,17 +897,18 @@ function getSequenceOfCaptures(positionSeq) {
  * @returns JSON data expressing the position and legal moves resulting from the last move in sequence, text indicators to distinguish which of white or black has the move and the other to have just made a move, scoresheet information such as the PGN movetext, symbols of captured pieces, and a text description of results if game is over; lastly a PGN plain text export of the game if the game is over
  */
 function getGameStatus(sequence, pgnSTR) {
-  const initPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0"
+  const initPosition = (
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0"
+  );
+  const initLegalMoves = getLegalMoves(
+    initPosition,
+    attackMap(
+      expand(initPosition.split(' ')[0]),
+      initPosition.split(' ')[1]
+    )
+  );
 
   if (sequence.length === 0) {
-    const initLegalMoves = getLegalMoves(
-      initPosition,
-      attackMap(
-        expand(initPosition.split(' ')[0]),
-        initPosition.split(' ')[1]
-      )
-    );
-
     return JSON.stringify({
       position: initPosition,
       legalMoves: initLegalMoves,
@@ -912,11 +920,39 @@ function getGameStatus(sequence, pgnSTR) {
       gameover: '',
       pgn: ''
     });
+  } else if ( sequence.match(/^([RT]|D,D)$/) ) {
+    const gameover = {
+      R: "Resignation: black wins",
+      T: "Flag fall: black wins",
+      "D,D": "Draw by agreement"
+    }[sequence];
+    const gameTerminationMarker = {
+      R: "0-1",
+      T: "0-1",
+      "D,D": "1/2-1/2"
+    }[sequence];
+    const pgn = printPGN(
+      pgnSTR, gameTerminationMarker, gameTerminationMarker
+    );
+
+    return JSON.stringify({
+      position: initPosition,
+      legalMoves: initLegalMoves,
+      white: "Has move",
+      black: "",
+      openingName: '',
+      movetext: gameTerminationMarker,
+      capturedList: '',
+      gameover,
+      pgn
+    });
   }
 
   const endSignal = sequence.match(/[RT]$|D,D$/)?.[0];
 
-  const pcnHalfmoves = sequence.replace(/,[RT]|D|,D/g, '');
+  const pcnHalfmoves = sequence.split(',').filter(s => {
+    return s.match(/[DRT]/);
+  }).join();
 
   const positions = getSequenceOfPositions(pcnHalfmoves, initPosition);
 
@@ -956,12 +992,12 @@ function getGameStatus(sequence, pgnSTR) {
       attacksPerPosition[i + 1],
       legalMovesPerPosition[i + 1]
     );
-  }).join(',');
+  }).join();
 
   const fullmoveNumberIndicatorTokensMerged = Array.from(
     {length: Math.ceil(pcnHalfmoves.split(',').length / 2)},
     (v, k) => (k + 1) + '.'
-  ).join(',');
+  ).join();
 
   const numberedMoves = fullmoveNumberIndicatorTokensMerged.split(',').map(
     (fmn, i) => {
@@ -1079,9 +1115,7 @@ function cpuPlay(legalMoves) {
   ];
 }
 
-const ui = { PGNSevenTagRoster, getGameStatus, expand, cpuPlay };
-
-const console = {
+const ui = {
   PGNSevenTagRoster,
   getGameStatus,
   expand,
@@ -1117,6 +1151,6 @@ const units = {
   getGameStatus
 }
 
-const engine = { ui, console, units }
+const engine = { ui, units }
 
 export default engine;
