@@ -1119,10 +1119,6 @@ function cpuPlay(legalMoves) {
 
 const ui = {
   PGNSevenTagRoster,
-  removeResignFlagfallAndOfferOfDraw,
-  getSequenceOfPositions,
-  getSequenceOfCaptures,
-  getCurrentLegalMoves,
   getGameStatus,
   expand,
   getPieceOn,
