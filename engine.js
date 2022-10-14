@@ -892,6 +892,17 @@ function getSequenceOfCaptures(positionSeq) {
 
 /**
  *
+ * @param {string} sequence This should be a comma-separated string of chess moves in Pure Coordinate Notation (PCN) and potentially non-PCN indications of game-ending events such as an offer of draw, flag fall (time is up), or resignation. The indicators of these events are required to be spelled with [capitals] "D" in the word "draw" or just "D" to represent draw offer, "R" in the words "resign" or "resignation" or just "R" to represent resignation, and "T" or "F" to represent flag fall or in spelling out phrases such as "Flag fall" and "Time is up", otherwise, this function would corrupt valid moves involving chess files "d" and "f" and pawn promotions to rook.
+ * @returns sequence of moves sans game-ending indications
+ */
+function removeResignFlagfallAndOfferOfDraw(sequence) {
+  return sequence.split(',').filter(s => {
+    return s.match(/[DFRT]/) == null;
+  }).join();
+}
+
+/**
+ *
  * @param {string} sequence comma-separated list of chess moves in Pure Coordinate Notation (PCN), listed in order played
  * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster of the Portable Game Notation (PGN) standard
  * @returns JSON data expressing the position and legal moves resulting from the last move in sequence, text indicators to distinguish which of white or black has the move and the other to have just made a move, scoresheet information such as the PGN movetext, symbols of captured pieces, and a text description of results if game is over; lastly a PGN plain text export of the game if the game is over
@@ -900,18 +911,17 @@ function getGameStatus(sequence, pgnSTR) {
   const initPosition = (
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0"
   );
-  const initLegalMoves = getLegalMoves(
-    initPosition,
-    attackMap(
-      expand(initPosition.split(' ')[0]),
-      initPosition.split(' ')[1]
-    )
-  );
 
   if (sequence.length === 0) {
     return JSON.stringify({
       position: initPosition,
-      legalMoves: initLegalMoves,
+      legalMoves: getLegalMoves(
+        initPosition,
+        attackMap(
+          expand(initPosition.split(' ')[0]),
+          initPosition.split(' ')[1]
+        )
+      ),
       white: "Has move",
       black: "",
       openingName: '',
@@ -920,28 +930,22 @@ function getGameStatus(sequence, pgnSTR) {
       gameover: '',
       pgn: ''
     });
-  } else if ( sequence.match(/^([RT]|D,D)$/) ) {
-    const gameover = {
-      R: "Resignation: black wins",
-      T: "Flag fall: black wins",
-      "D,D": "Draw by agreement"
-    }[sequence];
-    const gameTerminationMarker = {
-      R: "0-1",
-      T: "0-1",
-      "D,D": "1/2-1/2"
-    }[sequence];
-    const pgn = printPGN(
-      pgnSTR, gameTerminationMarker, gameTerminationMarker
-    );
+  } else if ( sequence.match(/^[FRT]$/) ) {
+    const gameover = [
+      { R: "Resignation:", T: "Flag fall:" }[sequence],
+      "black",
+      "wins"
+    ].join(' ');
+
+    const pgn = printPGN(pgnSTR, "0-1", "0-1");
 
     return JSON.stringify({
       position: initPosition,
-      legalMoves: initLegalMoves,
+      legalMoves: [],
       white: "Has move",
       black: "",
       openingName: '',
-      movetext: gameTerminationMarker,
+      movetext: "0-1",
       capturedList: '',
       gameover,
       pgn
@@ -950,9 +954,7 @@ function getGameStatus(sequence, pgnSTR) {
 
   const endSignal = sequence.match(/[RT]$|D,D$/)?.[0];
 
-  const pcnHalfmoves = sequence.split(',').filter(s => {
-    return s.match(/[DRT]/);
-  }).join();
+  const pcnHalfmoves = removeResignFlagfallAndOfferOfDraw(sequence);
 
   const positions = getSequenceOfPositions(pcnHalfmoves, initPosition);
 
@@ -1117,6 +1119,10 @@ function cpuPlay(legalMoves) {
 
 const ui = {
   PGNSevenTagRoster,
+  removeResignFlagfallAndOfferOfDraw,
+  getSequenceOfPositions,
+  getSequenceOfCaptures,
+  getCurrentLegalMoves,
   getGameStatus,
   expand,
   getPieceOn,
