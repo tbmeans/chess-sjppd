@@ -941,7 +941,7 @@ function getGameStatus(sequence, pgnSTR) {
 
     return JSON.stringify({
       position: initPosition,
-      legalMoves: [],
+      legalMoves: '',
       white: "Has move",
       black: "",
       openingName: '',
