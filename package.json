@@ -1,6 +1,6 @@
 {
   "name": "chess-sjppd",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "type": "module",
   "description": "Provides results of the user's choice of moves necessary to progress a chess game. A rudimentary chess engine is provided for play vs the computer.",
   "scripts": {

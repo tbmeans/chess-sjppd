@@ -1036,8 +1036,8 @@ function removeResignFlagfallAndOfferOfDraw(sequence) {
  *
  * @param {string} sequence comma-separated list of chess moves in Pure
  *     Coordinate Notation (PCN), listed in order played
- * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster (STR)
- *     of the Portable Game Notation (PGN) standard
+ * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster
+ *     (STR) of the Portable Game Notation (PGN) standard
  * @returns JSON data expressing the position and legal moves resulting from
  *     the last move in sequence, text indicators to distinguish which of white
  *     or black has the move and the other to have just made a move, scoresheet
