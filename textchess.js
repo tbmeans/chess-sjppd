@@ -220,10 +220,14 @@ const destChoice = {
   rl.close();
 })();
 
-/** Render a text chess board to console. Origin squares marked with "o" and target squares marked with an "X".
- * @param {Array} [position] chess position in Forsyth-Edwards Notation (FEN) with at least the piece placement data (PPD) field
- * @param {(string|Array)} [origins] a single origin square string in alebraic notation or array of such.
- * @param {Array} [targets] the targetSquares from "rays and nearest not on rays" listing function.
+/** Render a text chess board to console. Origin squares marked with "o" and
+ *     target squares marked with an "X".
+ * @param {Array} [position] chess position in Forsyth-Edwards Notation (FEN)
+ *     with at least the piece placement data (PPD) field
+ * @param {(string|Array)} [origins] a single origin square string in alebraic
+ *     notation or array of such.
+ * @param {Array} [targets] the targetSquares from "rays and nearest not on
+ *     rays" listing function.
  */
 function plot(position, origins, targets) {
   const an64 = Object.freeze(

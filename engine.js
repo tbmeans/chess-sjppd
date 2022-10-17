@@ -9,19 +9,31 @@ const an64 = Object.freeze(
 );
 
 /**
- * An arrow function to be used as the callback of Array.prototype.map that will reverse the elements in a new array, avoiding Array.prototype.reverse's array mutation
+ * An arrow function to be used as the callback of Array.prototype.map that
+ *     will reverse the elements in a new array, avoiding
+ *     Array.prototype.reverse's array mutation
  * @param {*} v dummy value
  * @param {Number} k dummy index
- * @param {Array} o dummy object, represents the array on which Array.prototype.map is called, this function being the callback of map
- * @returns element as far from the end as the element indicated by dummy index is from the start
+ * @param {Array} o dummy object, represents the array on which
+ *     Array.prototype.map is called, this function being the callback of map
+ * @returns element as far from the end as the element indicated by dummy index
+ *     is from the start
  */
 const reverse = (v, k, o) => o[o.length - 1 - k];
 
 /**
- * Produces an array form of piece placement data (PPD) from chess position in Forsyth-Edwards Notation (FEN), where each char in PPD, digits converted into '1' chars, is an array element. Features option to order rank-ascending, to best represent a board of moveable pieces, or rank-descending, for printing a text representation of a chessboard to console.
+ * Produces an array form of piece placement data (PPD) from chess position in
+ *     Forsyth-Edwards Notation (FEN), where each char in PPD, digits converted
+ *     into '1' chars, is an array element. Features option to order
+ *     rank-ascending, to best represent a board of moveable pieces, or
+ *     rank-descending, for printing a text representation of a chessboard to
+ *     console.
  * @param {string} ppd first space-delimited substring from FEN chess position
  * @param {boolean} isRankDescending choose order of PPD chars in array
- * @returns FEN piece placement data without rank delimiters and with digits greater than 1 replaced by a string of 1s of length equal to digit, for a sequence of 64 single character strings representing either a piece on a square or an empty square
+ * @returns FEN piece placement data without rank delimiters and with digits
+ *     greater than 1 replaced by a string of 1s of length equal to digit, for
+ *     a sequence of 64 single character strings representing either a piece on
+ *     a square or an empty square
  */
 const expand = (ppd, isRankDescending) => {
   return ppd.replace( /\d/g, d => '1'.repeat(d) ).split('/').map(
@@ -31,24 +43,30 @@ const expand = (ppd, isRankDescending) => {
 
 /**
  * Given a square, get the FEN of the piece on it.
- * @param {string} square algebraic notation of the square that you want to know the piece on
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
- * @returns the piece in FEN on the given square but if the square is not valid algebraic notation, empty string is returned
+ * @param {string} square algebraic notation of the square that you want to
+ *     know the piece on
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
+ * @returns the piece in FEN on the given square but if the square is not valid
+ *     algebraic notation, empty string is returned
  */
 const getPieceOn = (square, ppd64) => ppd64[an64.indexOf(square)] || '';
 
 /**
  *
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
  * @param {string} ac active color from FEN, a single char 'w' or 'b'
- * @returns algebraic notation of the square that the king of active color is on
+ * @returns algebraic notation of the square that the king of active color's on
  */
 const getActiveKingSquare = (ppd64, ac) => {
   return an64[ppd64.indexOf(ac === 'w' ? 'K' : 'k')];
 };
 
 /**
- * Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece placement data, in which capital letters indicate white pieces and lowercase indicates black pieces.
+ * Get color of a piece expressed in Forsyth-Edwards Notation (FEN) piece
+ *     placement data, in which capital letters indicate white pieces and
+ *     lowercase indicates black pieces.
  * @param {string} s string expression of a chess piece in FEN
  * @returns single-char string "w" or "b"
  */
@@ -62,10 +80,13 @@ const color = s => {
 };
 
 /**
- * List algebraic notation of squares from start to end of board, up or down ranks
+ * List alg. notation of squares from start to end of board, up or down ranks
  * @param {string} n algebraic notation of a square to start the sequence
  * @param {boolean} isUp choice of whether the next goes up in rank or down
- * @returns comma-separated list of algebraic notation in sequence after given start square to the chessboard boundary in the given rank direction--note that start square is not included, and if next in sequence does not exist due to boundary, returns empty string
+ * @returns comma-separated list of algebraic notation in sequence after given
+ *     start square to the chessboard boundary in the given rank
+ *     direction--note that start square is not included, and if next in
+ *     sequence does not exist due to boundary, returns empty string
  */
 const fileSeq = (startSquare, isUp) => {
   return an64.filter(n => {
@@ -77,10 +98,15 @@ const fileSeq = (startSquare, isUp) => {
 };
 
 /**
- * List algebraic notation of squares from start to end of board, left or right across files
+ * List algebraic notation of squares from start to end of board, left or
+ *     right across files
  * @param {string} n algebraic notation of a square to start the sequence
- * @param {boolean} isRt choice of whether the next goes right or left in file sequence by alpha
- * @returns comma-separated list of algebraic notation in sequence after given start square to the chessboard boundary in the given file direction--note that start square is not included, and if next in sequence does not exist due to boundary, returns empty string
+ * @param {boolean} isRt choice of whether the next goes right or left in file
+ *     sequence by alpha
+ * @returns comma-separated list of algebraic notation in sequence after given
+ *     start square to the chessboard boundary in the given file
+ *     direction--note that start square is not included, and if next in
+ *     sequence does not exist due to boundary, returns empty string
  */
 const rankSeq = (startSquare, isRt) => {
   return an64.filter(n => {
@@ -95,8 +121,10 @@ const rankSeq = (startSquare, isRt) => {
  * Step along a chessboard anti/diagonal
  * @param {string} n algebraic notation of a square to start the sequence
  * @param {boolean} isUp choice of whether the next goes up in rank or down
- * @param {boolean} isAnti choice of whether we want the next square on the anti-diagonal or diagonal
- * @returns algebraic notation of the next square in sequence along a chessboard anti/diagonal as indicated by params
+ * @param {boolean} isAnti choice of whether we want the next square on the
+ *     anti-diagonal or diagonal
+ * @returns algebraic notation of the next square in sequence along a
+ *     chessboard anti/diagonal as indicated by params
  */
 const nextOnDiag = (n, isUp, isAnti) => {
   return (
@@ -130,7 +158,8 @@ const charTable = Object.freeze({
 
 /**
  *
- * @param {string} n Forsyth-Edwards Notation (FEN) for pieces, can be a single notation character or a consecutive/non-delimited string of FEN piece characters
+ * @param {string} n Forsyth-Edwards Notation (FEN) for pieces, can be a single
+ *     notation character or a consecutive/non-delim. string of FEN piece chars
  * @returns single or non-delimited string of Unicode chess piece symbols
  */
 const nFEToUnicode = n => n.split('').map(s => charTable[s]).join('');
@@ -138,9 +167,14 @@ const nFEToUnicode = n => n.split('').map(s => charTable[s]).join('');
 /**
  * List the squares of any diagonal ray on chessboard in algebraic notation
  * @param {string} n algebraic notation of a square to start the sequence
- * @param {boolean} isUp choice of whether the sequence goes up or down in rank along the anti/diagonal
- * @param {boolean} isAnti choice of whether the sequence is on the anti-diagonal or diagonal
- * @returns comma-separated list of algebraic notation in sequence from given start square to the chessboard boundary in the given anti/diagonal direction--note that start square IS included and if sequence goes out of bounds beyond start square, the lone start square is returned back
+ * @param {boolean} isUp choice of whether the sequence goes up or down in rank
+ *     along the anti/diagonal
+ * @param {boolean} isAnti choice of whether the sequence is on the
+ *     anti-diagonal or diagonal
+ * @returns comma-separated list of algebraic notation in sequence from given
+ *     start square to the chessboard boundary in the given anti/diagonal
+ *     direction--note that start square IS included and if sequence goes out
+ *     of bounds beyond start square, the lone start square is returned back
  */
  function diagSeq(n, isUp, isAnti) {
   const fileStop = isUp && !isAnti || !isUp && isAnti ? 'h' : 'a';
@@ -157,8 +191,10 @@ const nFEToUnicode = n => n.split('').map(s => charTable[s]).join('');
 
 /**
  * Chessboard rays as sequences of algebraic notation
- * @param {string} origin algebraic notation of the square from which chessboard square sequence rays emanate
- * @returns 8 comma-delimited strings representing each chessboard square sequence ray out from the origin, in order clockwise from north/12'o'clock
+ * @param {string} origin algebraic notation of the square from which
+ *     chessboard square sequence rays emanate
+ * @returns 8 comma-delimited strings representing each chessboard square
+ *     sequence ray out from the origin, in order clockwise from north/12'o'clock
  */
 function raysFrom(origin) {
   return Object.freeze([
@@ -174,9 +210,13 @@ function raysFrom(origin) {
 }
 
 /**
- * Get a set of all jump moves from a given square in a same order for listing slide rays
- * @param {string} origin a square serving as the center of a circle/cross of knight moves
- * @returns list of all jump target squares from a given origin, in clockwise order from north/zero-azimuth/12'o'clock, and if out of bounds in a direction, empty string
+ * Get a set of all jump moves from a given square in a same order for listing
+ *     slide rays
+ * @param {string} origin a square serving as the center of a circle or cross
+ *     of knight moves
+ * @returns list of all jump target squares from a given origin, in clockwise
+ *     order from north/zero-azimuth/12'o'clock, and if out of bounds in a
+ *     direction, empty string
  */
 function jumpCircleAround(origin) {
   if (origin.match(/[a-h][1-8]/) == null) {
@@ -196,10 +236,16 @@ function jumpCircleAround(origin) {
 }
 
 /**
- * Regex patterns to identify an arrangement of pieces in FEN along a ray as check, pin, or target square attack
- * @param {string} activeColor the color of pieces whose moves are constrained by attacks from opposite color pieces
- * @param {boolean} isForKingsOriginSquare truthy value selects regex to detect check and pin, falsy value or lack of value selects regex to detect target square attack
- * @returns three regex for matching FEN piece sequences along chessboard rays of squares, first for rank and file rays, second for diagonal rays above the origin, third for diagonal rays below the origin
+ * Regex patterns to identify an arrangement of pieces in FEN along a ray as
+ *     check, pin, or target square attack
+ * @param {string} activeColor the color of pieces whose moves are constrained
+ *     by attacks from opposite color pieces
+ * @param {boolean} isForKingsOriginSquare truthy value selects regex to detect
+ *     check and pin, falsy value or lack of value selects regex to detect
+ *     target square attack
+ * @returns three regex for matching FEN piece sequences along chessboard rays
+ *     of squares, first for rank and file rays, second for diagonal rays above
+ *     the origin, third for diagonal rays below the origin
  */
 function rayAttackPatterns(activeColor, isForKingsOriginSquare) {
   if (activeColor === 'w') {
@@ -234,10 +280,17 @@ function rayAttackPatterns(activeColor, isForKingsOriginSquare) {
 }
 
 /**
- * Subsets of piece placement data, collecting either all pieces along each chessboard ray of squares out from an origin square or all pieces that are a knight's jump away from an origin square.
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
- * @param {Array} squares array of 8 comma-delimited strings representing each chessboard square sequence ray out from the origin or each square you can jump to from origin, in order clockwise from north/12'o'clock
- * @returns array of 8 comma-delimited strings with the sequence of pieces in FEN out from the origin per ray or jump direction, correpsonds to input {@link squares}
+ * Subsets of piece placement data, collecting either all pieces along each
+ *     chessboard ray of squares out from an origin square or all pieces that
+ *     are a knight's jump away from an origin square.
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
+ * @param {Array} squares array of 8 comma-delimited strings representing each
+ *     chessboard square sequence ray out from the origin or each square you
+ *     can jump to from origin, in order clockwise from north/12'o'clock
+ * @returns array of 8 comma-delimited strings with the sequence of pieces in
+ *     FEN out from the origin per ray or jump direction, correpsonds to input
+ *     {@link squares}
  */
 function ppdSubset(ppd64, squares) {
   return Object.freeze(
@@ -251,9 +304,13 @@ function ppdSubset(ppd64, squares) {
 
 /**
  * Piece placement data mapping ray attacks
- * @param {Array} piecesOnRaySquares a subset of PPD, listing pieces along each ray out from an origin
- * @param {Object} rayAttackPatterns a collection of regex patterns representing check, absolute pin, or square attack along rays according to the specs of the namesake function
- * @returns PPD subset arranged the same as {@link piecesOnRaySquares} but each ray is trimmed at the square of attacking piece
+ * @param {Array} piecesOnRaySquares a subset of PPD, listing pieces along each
+ *     ray out from an origin
+ * @param {Object} rayAttackPatterns a collection of regex patterns
+ *     representing check, absolute pin, or square attack along rays according
+ *     to the specs of the namesake function
+ * @returns PPD subset arranged the same as {@link piecesOnRaySquares} but each
+ *     ray is trimmed at the square of attacking piece
  */
 function trimToRayEvent(piecesOnRaySquares, rayAttackPatterns) {
   return Object.freeze(
@@ -274,10 +331,17 @@ function trimToRayEvent(piecesOnRaySquares, rayAttackPatterns) {
 
 /**
  * List rays of squares and single squares from which an origin is attacked.
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
  * @param {string} ac active color from FEN, a single char 'w' or 'b'
- * @param {string} square the square that is potentially attacked, in algebraic notation, assumed to be the king's square if not provided
- * @returns an array of CSV strings of algebraic notation sequences: even-indexed strings are rays of sliding check on king, absolute pin of a piece to king, or attack on a non-king-occupied square; odd-indexed strings are single squares of jump attack; index 0 denotes the north direction on chessboard and following indices go clockwise around the compass points
+ * @param {string} square the square that is potentially attacked, in algebraic
+ *     notation, assumed to be the king's square if not provided
+ * @returns an array of CSV strings of algebraic notation sequences:
+ *     even-indexed strings are rays of sliding check on king, absolute pin of
+ *     a piece to king, or attack on a non-king-occupied square; odd-indexed
+ *     strings are single squares of jump attack; index 0 denotes the north
+ *     direction on chessboard and following indices go clockwise around the
+ *     compass points
  */
 function attackMap(ppd64, ac, square) {
   const org = square ?? getActiveKingSquare(ppd64, ac);
@@ -339,11 +403,15 @@ function attackMap(ppd64, ac, square) {
 }
 
 /**
- * Squares to which a given piece may legally move before consideration of check and absolute pin
+ * Squares to which a given piece may legally move before consideration of
+ *     check and absolute pin
  * @param {string} origin square in algebraic notation
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
- * @param {string} epts en passant target square from FEN (in algebraic notation)
- * @returns comma-separated lists of target squares in algebraic notation per direction of legal movement, the piece on origin, and whether that piece is white
+ * @param {string} ppd64 sequence of 64 characters each representing either
+ *     a piece on a square or an empty square, in FEN
+ * @param {string} epts en passant target square from FEN (in alg. notation)
+ * @returns comma-separated lists of target squares in algebraic notation per
+ *     direction of legal movement, the piece on origin, and whether that piece
+ *     is white
  */
 function targetsOfAPiece(origin, ppd64, epts) {
   const pieceOnOrg = getPieceOn(origin, ppd64);
@@ -405,11 +473,13 @@ function targetsOfAPiece(origin, ppd64, epts) {
 /**
  * Legal moves for a single piece
  * @param {string} org origin square of the piece to generate legal moves for
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
  * @param {string} ac active color from FEN, a single char 'w' or 'b'
  * @param {string} ca castling availability from FEN
- * @param {string} epts en passant target square from FEN, in algebraic notation
- * @param {string} constraint a comma-sep list of algebraic notation along which check is given or a piece is pinned
+ * @param {string} epts en passant target square from FEN, in alg. notation
+ * @param {string} constraint a comma-sep list of algebraic notation along
+ *     which check is given or a piece is pinned
  * @returns target square list, comma-delimited algebraic notation
  */
  function legalTargetsOfAPiece(org, ppd64, ac, ca, epts, constraint, isCheck) {
@@ -475,8 +545,14 @@ function targetsOfAPiece(origin, ppd64, epts) {
 
 /**
  * Legal moves generation
- * @param {string} position chess position in Forsyth-Edwards Notation (FEN) with at least the first 4 of 6 total fields, space-separated
- * @param {Array} attacksOnKing CSV strings of algebraic notation sequences: even-indexed strings are rays of sliding check on king, absolute pin of a piece to king, or attack on a non-king-occupied square; odd-indexed strings are single squares of jump attack; index 0 denotes the north direction on chessboard and following indices go clockwise around the compass points.
+ * @param {string} position chess position in Forsyth-Edwards Notation (FEN)
+ *     with at least the first 4 of 6 total fields, space-separated
+ * @param {Array} attacksOnKing CSV strings of algebraic notation sequences:
+ *     even-indexed strings are rays of sliding check on king, absolute pin of
+ *     a piece to king, or attack on a non-king-occupied square; odd-indexed
+ *     strings are single squares of jump attack; index 0 denotes the north
+ *     direction on chessboard and following indices go clockwise around the
+ *     compass points.
  * @returns list of moves in Pure Coordinate Notation (PCN)
  */
 function getLegalMoves(position, attacksOnKing) {
@@ -545,11 +621,19 @@ function getLegalMoves(position, attacksOnKing) {
 }
 
 /**
- * Params express a move and a chess position as defined by 5 of 6 fields of Forsyth-Edwards Notation (FEN) and a string list of captured pieces in FEN.
- * This function moves a piece on the piece placement data-based array representation of a chessboard. The piece placement data field of FEN is the layout of pieces by rank, pieces are single character first letters of name of type of piece, capitalized for white, lowercase for black, empty spaces marked by numbers, compressing consecutive empty squares into digits greater than 1.
+ * Params express a move and a chess position as defined by 5 of 6 fields of
+ *     Forsyth-Edwards Notation (FEN) & string list of captured pieces in FEN.
+ * This function moves a piece on the piece placement data-based array
+ *     representation of a chessboard. The piece placement data field of FEN
+ *     is the layout of pieces by rank, pieces are single character first
+ *     letters of name of type of piece, capitalized for white, lowercase for
+ *     black, empty spaces marked by numbers, compressing consecutive empty
+ *     squares into digits greater than 1.
  * @param {string} pcn move made, in Pure Coordinate Notation (PCN).
- * @param {string} position chess position in Forsyth-Edwards Notation (FEN) with at least the first 4 of 6 total fields, space-separated
- * @returns the next position expressed in the first 5 of 6 fields of FEN, comma separated with captured piece in FEN
+ * @param {string} position chess position in Forsyth-Edwards Notation (FEN)
+ *     with at least the first 4 of 6 total fields, space-separated
+ * @returns the next position expressed in the first 5 of 6 fields of FEN,
+ *     comma separated with captured piece in FEN
  */
  function nextPosition(pcn, position) {
   const org = pcn.slice(0, 2);
@@ -623,7 +707,8 @@ function getLegalMoves(position, attacksOnKing) {
 /**
  *
  * @param {string} ppd piece placement data from FEN
- * @param {Boolean} isWhite whether the user is attempting to obtain white pieces material list
+ * @param {Boolean} isWhite whether the user is attempting to obtain white
+ *     pieces material list
  * @returns all pieces of the same color in FEN
  */
 function getMaterialInFEN(ppd, isWhite) {
@@ -633,9 +718,13 @@ function getMaterialInFEN(ppd, isWhite) {
 }
 
 /**
- * Analyzes sets of pieces to see if there is insufficient material to checkmate.
- * @param {Array} movesOrMaterial a list of all legal moves in 'org,piece,targets' format or a list of opposite-active-color material in 'org,piece' format
- * @returns Boolean indicating whether the given side's material is sufficient to win by checkmate
+ * Analyzes sets of pieces to see if there is insufficient material to
+ *     checkmate.
+ * @param {Array} movesOrMaterial a list of all legal moves in
+ *     'org,piece,targets' format or a list of opposite-active-color material
+ *     in 'org,piece' format
+ * @returns Boolean indicating whether the given side's material is sufficient
+ *     to win by checkmate
  */
 function isInsufficientMaterial(materialInFEN) {
   if (materialInFEN.length > 3) {
@@ -650,9 +739,12 @@ function isInsufficientMaterial(materialInFEN) {
 
 /**
  * For conversion from Pure Coordinate Notation to Standard Algebraic Notation.
- * @param {string} legalMoves list of all legal moves in Pure Coordinate Notation (PCN)
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
- * @returns list of legal moves in PCN that need disambiguation in SAN, and each PCN move listed has the disambiguation character attached to the end
+ * @param {string} legalMoves list of all legal moves in Pure Coordinate
+ *     Notation (PCN)
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
+ * @returns list of legal moves in PCN that need disambiguation in SAN & each
+ *     PCN move listed has the disambiguation character attached to the end
  */
 function disambiguationTable(legalMoves, ppd64) {
   const byPieceType = s => {
@@ -693,13 +785,23 @@ function disambiguationTable(legalMoves, ppd64) {
 }
 
 /**
- * Translates pure coordinate notation (PCN) to standard algebraic notation (SAN) using legal moves listing, per FIDE Laws.
+ * Translates pure coordinate notation (PCN) to standard algebraic notation
+ *     (SAN) using legal moves listing, per FIDE Laws.
  * @param {string} pcn a chess move given in PCN
  * @param {Array} legalMoves a list of all legal moves in PCN
- * @param {string} ppd64 sequence of 64 characters each representing either a piece on a square or an empty square, in FEN
- * @param {string} disambiguationTable comma-separated strings of 5-6 chars, first 4 chars is always PCN, 5th and/or 6th the disambiguation portion of origin square and there is a string for each move whose origin needs to be at least partially specified in standard algebraic notation
- * @param {Array} nextAttacks output of {@link attackMap} called with the 64-length piece placement and active color resulting from {@link nextPosition} with inputs the {@link pcn} parameter here and the position corresponding to the {@link ppd64} parameter here.
- * @param {string} nextAllMoves output of {@link legalMoves} called with the output of {@link nextPosition}, "next" being after the position indicated by the {@link pcn} and {@link ppd64} parameters here
+ * @param {string} ppd64 sequence of 64 characters each representing either a
+ *     piece on a square or an empty square, in FEN
+ * @param {string} disambiguationTable comma-separated strings of 5-6 chars,
+ *     first 4 chars is always PCN, 5th and/or 6th the disambiguation portion
+ *     of origin square and there is a string for each move whose origin needs
+ *     to be at least partially specified in standard algebraic notation
+ * @param {Array} nextAttacks output of {@link attackMap} called with the
+ *     64-length piece placement and active color resulting from
+ *     {@link nextPosition} with inputs the {@link pcn} parameter here and the
+ *     position corresponding to the {@link ppd64} parameter here.
+ * @param {string} nextAllMoves output of {@link legalMoves} called with the
+ *     output of {@link nextPosition}, "next" being after the position
+ *     indicated by the {@link pcn} and {@link ppd64} parameters here
  * @returns SAN for given chess move
  */
  function toSAN(pcn, ppd64, disambiguationTable, nextAttacks, nextAllMoves) {
@@ -747,7 +849,8 @@ function disambiguationTable(legalMoves, ppd64) {
 /**
  *
  * @param {string} positions comma-separated sequence of chess positions
- * @returns true or false if this sequence of chess positions repeats a position twice for a total of 3 occurrences
+ * @returns true or false if this sequence of chess positions repeats a
+ *     position twice for a total of 3 occurrences
  */
 function is3foldRep(positions) {
   return positions.split(',').map(p => {
@@ -763,7 +866,7 @@ function is3foldRep(positions) {
 }
 
 /**
- * Creates an object which prints a minimal Portable Game Notation export string
+ * Creates an object that prints a minimal Portable Game Notation export string
  * @constructor
  * @param {string} [white] name of the player of white, default, site visitor
  * @param {string} [black] name of the player of black, default, site visitor
@@ -780,9 +883,12 @@ function is3foldRep(positions) {
 
 /**
  *
- * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster of the Portable Game Notation standard
- * @param {string} [result] game termination marker, defaults to the in-progress marker
- * @param {string} [movetext] The Portable Game Notation sequence of moves in Standard Algebraic Notation
+ * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster
+ *    (STR) of the Portable Game Notation (PGN) standard
+ * @param {string} [result] game termination marker, defaults to the
+ *     in-progress marker
+ * @param {string} [movetext] The Portable Game Notation (PGN) sequence of
+ *     moves in Standard Algebraic Notation (SAN)
  * @returns Portable Game Notation text for export
  */
 function printPGN(pgnSTR, result, movetext) {
@@ -810,10 +916,17 @@ function printPGN(pgnSTR, result, movetext) {
 
 /**
  *
- * @param {string} sequenceOfMoves comma-separated list of chess moves in Pure Coordinate Notation (PCN), listed in order played
- * @param {string} position an expression of chess position with the first five fields of Forsyth-Edwards Notation (FEN), corresponds to the board arrangement on which one of the moves in sequence was played
- * @param {number} indexOfMove zero-based index indicating which in the sequence of moves was played on {@link position}
- * @returns comma-separated sequence of chess positions (each expressed by the 1st 5 fields of FEN) from the position that the first move in sequence was played on to the position resulting from the play of the final move in sequence
+ * @param {string} sequenceOfMoves comma-separated list of chess moves in
+ *     Pure Coordinate Notation (PCN), listed in order played
+ * @param {string} position an expression of chess position with the first five
+ *     fields of Forsyth-Edwards Notation (FEN), corresponds to the board
+ *     arrangement on which one of the moves in sequence was played
+ * @param {number} indexOfMove zero-based index indicating which in the
+ *     sequence of moves was played on {@link position}
+ * @returns comma-separated sequence of chess positions (each expressed by the
+ *     1st 5 fields of FEN) from the position that the first move in sequence
+ *     was played on to the position resulting from the play of the final move
+ *     in sequence
  */
 function getSequenceOfPositions(sequenceOfMoves, position, indexOfMove) {
   if (indexOfMove === sequenceOfMoves.split(',').length) {
@@ -837,9 +950,17 @@ function getSequenceOfPositions(sequenceOfMoves, position, indexOfMove) {
 
 /**
  *
- * @param {string} before chess material for one side, before a move is made by the other side, material expressed in FEN chars no-delim., and gleaned from FEN in rank-ascending, file left-to-right order, per {@link getMaterialInFEN}
- * @param {string} after the {@link before} chess material for one side potentially changed by the move made by the other side due to capture, expressed in FEN chars no-delim., still in rank-ascending order
- * @returns either a single FEN char not present in the {@link after}-material that was present in the {@link before}-material, indicating the piece captured by the other side, or an empty string indicating that no capture occurred
+ * @param {string} before chess material for one side, before a move is made by
+ *     the other side, material expressed in FEN chars no-delim., and gleaned
+ *     from FEN in rank-ascending, file left-to-right order, per
+ *     {@link getMaterialInFEN}
+ * @param {string} after the {@link before} chess material for one side
+ *     potentially changed by the move made by the other side due to capture,
+ *     expressed in FEN chars no-delim., still in rank-ascending order
+ * @returns either a single FEN char not present in the {@link after}-material
+ *     that was present in the {@link before}-material, indicating the piece
+ *     captured by the other side, or an empty string indicating that no
+ *     capture occurred
  */
 function getMissingMaterial(before, after) {
   return before[
@@ -851,8 +972,9 @@ function getMissingMaterial(before, after) {
 
 /**
  *
- * @param {string} positionSeq comma-separated sequence of chess positions each expressed by the 1st 5 fields of Forsyth-Edwards Notation (FEN)
- * @returns non-delimited string of FEN chars representing the sequence of captures
+ * @param {string} positionSeq comma-separated sequence of chess positions each
+ *     expressed by the 1st 5 fields of Forsyth-Edwards Notation (FEN)
+ * @returns non-delim. string of FEN chars representing the sequence of captures
  */
 function getSequenceOfCaptures(positionSeq) {
   if (positionSeq.split(',').length < 2) {
@@ -892,7 +1014,16 @@ function getSequenceOfCaptures(positionSeq) {
 
 /**
  *
- * @param {string} sequence This should be a comma-separated string of chess moves in Pure Coordinate Notation (PCN) and potentially non-PCN indications of game-ending events such as an offer of draw, flag fall (time is up), or resignation. The indicators of these events are required to be spelled with [capitals] "D" in the word "draw" or just "D" to represent draw offer, "R" in the words "resign" or "resignation" or just "R" to represent resignation, and "T" or "F" to represent flag fall or in spelling out phrases such as "Flag fall" and "Time is up", otherwise, this function would corrupt valid moves involving chess files "d" and "f" and pawn promotions to rook.
+ * @param {string} sequence This should be a comma-separated string of chess
+ *     moves in Pure Coordinate Notation (PCN) and potentially non-PCN
+ *     indications of game-ending events such as an offer of draw, flag fall
+ *     (time is up), or resignation. The indicators of these events are
+ *     required to be spelled with [capitals] "D" in the word "draw" or just
+ *     "D" to represent draw offer, "R" in the words "resign" or "resignation"
+ *     or just "R" to represent resignation, and "T" or "F" to represent flag
+ *     fall or in spelling out phrases such as "Flag fall" and "Time is up",
+ *     otherwise, this function would corrupt valid moves involving chess files
+ *     "d" and "f" and pawn promotions to rook.
  * @returns sequence of moves sans game-ending indications
  */
 function removeResignFlagfallAndOfferOfDraw(sequence) {
@@ -903,9 +1034,16 @@ function removeResignFlagfallAndOfferOfDraw(sequence) {
 
 /**
  *
- * @param {string} sequence comma-separated list of chess moves in Pure Coordinate Notation (PCN), listed in order played
- * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster of the Portable Game Notation (PGN) standard
- * @returns JSON data expressing the position and legal moves resulting from the last move in sequence, text indicators to distinguish which of white or black has the move and the other to have just made a move, scoresheet information such as the PGN movetext, symbols of captured pieces, and a text description of results if game is over; lastly a PGN plain text export of the game if the game is over
+ * @param {string} sequence comma-separated list of chess moves in Pure
+ *     Coordinate Notation (PCN), listed in order played
+ * @param {Object} pgnSTR Object whose properties comprise the Seven Tag Roster (STR)
+ *     of the Portable Game Notation (PGN) standard
+ * @returns JSON data expressing the position and legal moves resulting from
+ *     the last move in sequence, text indicators to distinguish which of white
+ *     or black has the move and the other to have just made a move, scoresheet
+ *     information such as the PGN movetext, symbols of captured pieces, and a
+ *     text description of results if game is over; lastly a PGN plain text
+ *     export of the game if the game is over
  */
 function getGameStatus(sequence, pgnSTR) {
   const initPosition = (
@@ -1108,7 +1246,8 @@ function getGameStatus(sequence, pgnSTR) {
 }
 
 /** CHESS ENGINE, for now, random moves in Pure Coordinate Notation (PCN)
- * @param {string} legalMoves comma-separated list of all moves that may be made in PCN
+ * @param {string} legalMoves comma-separated list of all moves that may be
+ *     made in PCN
  * @returns a randomly chosen move from a list of PCN
 */
 function cpuPlay(legalMoves) {
@@ -1117,42 +1256,39 @@ function cpuPlay(legalMoves) {
   ];
 }
 
-const ui = {
-  PGNSevenTagRoster,
-  getGameStatus,
-  expand,
-  getPieceOn,
-  cpuPlay
+export default {
+  ui: {
+    PGNSevenTagRoster,
+    getGameStatus,
+    expand,
+    getPieceOn,
+    cpuPlay
+  },
+  units: {
+    expand,
+    color,
+    fileSeq,
+    rankSeq,
+    nextOnDiag,
+    diagSeq,
+    raysFrom,
+    jumpCircleAround,
+    rayAttackPatterns,
+    ppdSubset,
+    trimToRayEvent,
+    attackMap,
+    targetsOfAPiece,
+    legalTargetsOfAPiece,
+    getLegalMoves,
+    nextPosition,
+    getMaterialInFEN,
+    isInsufficientMaterial,
+    disambiguationTable,
+    toSAN,
+    is3foldRep,
+    PGNSevenTagRoster,
+    getSequenceOfPositions,
+    getSequenceOfCaptures,
+    getGameStatus
+  }
 };
-
-const units = {
-  expand,
-  color,
-	fileSeq,
-	rankSeq,
-	nextOnDiag,
-	diagSeq,
-  raysFrom,
-	jumpCircleAround,
-  rayAttackPatterns,
-  ppdSubset,
-  trimToRayEvent,
-  attackMap,
-  targetsOfAPiece,
-	legalTargetsOfAPiece,
-  getLegalMoves,
-  nextPosition,
-  getMaterialInFEN,
-  isInsufficientMaterial,
-  disambiguationTable,
-  toSAN,
-  is3foldRep,
-  PGNSevenTagRoster,
-  getSequenceOfPositions,
-  getSequenceOfCaptures,
-  getGameStatus
-}
-
-const engine = { ui, units }
-
-export default engine;
