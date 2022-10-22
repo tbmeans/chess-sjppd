@@ -834,7 +834,7 @@ function disambiguationTable(legalMoves, ppd64) {
   if (pieceInSAN.length === 0) { // pawn
     return (
       (captureOccurred ? org[0] + 'x' : '') + tsq +
-      (pro ? '=' + pro : '') +
+      (pro ? '=' + pro.toUpperCase() : '') +
       (isCheck ? (isMate ? "#" : "+") : '')
     );
   }
