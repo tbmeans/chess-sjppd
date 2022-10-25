@@ -1032,6 +1032,13 @@ function removeResignFlagfallAndOfferOfDraw(sequence) {
   }).join();
 }
 
+const plyStatusMessages = [
+  "Has the move",
+  "check",
+  "checkmate",
+  "Made move"
+];
+
 /**
  *
  * @param {string} sequence comma-separated list of chess moves in Pure
@@ -1060,7 +1067,7 @@ function getGameStatus(sequence, pgnSTR) {
           initPosition.split(' ')[1]
         )
       ),
-      white: "Has move",
+      white: plyStatusMessages[0],
       black: "",
       openingName: '',
       movetext: '',
@@ -1080,7 +1087,7 @@ function getGameStatus(sequence, pgnSTR) {
     return JSON.stringify({
       position: initPosition,
       legalMoves: '',
-      white: "Has move",
+      white: plyStatusMessages[0],
       black: "",
       openingName: '',
       movetext: "0-1",
@@ -1153,9 +1160,12 @@ function getGameStatus(sequence, pgnSTR) {
   const sanMark = isCheckOrMate ? numberedMoves.at(-1) : '';
 
   const hasMoveMsg = (
-    sanMark.length > 0 ?
-    { "+": "check", "#": "checkmate" }[sanMark] :
-    "Has move"
+    sanMark.length > 0 && (
+      {
+        "+": plyStatusMessages[1],
+        "#": plyStatusMessages[2]
+      }[sanMark]
+    ) || plyStatusMessages[0]
   );
 
   const resultingPosition = positions.split(',').at(-1);
@@ -1164,9 +1174,11 @@ function getGameStatus(sequence, pgnSTR) {
 
   const resultingACIsWhite = resultingPosition.split(' ')[1] === 'w';
 
-  const white = resultingACIsWhite ? hasMoveMsg : "Made move";
+  const white = resultingACIsWhite ? hasMoveMsg : plyStatusMessages[3];
 
-  const black = white === "Made move" ? hasMoveMsg : "Made move";
+  const black = white === plyStatusMessages[3] && hasMoveMsg || (
+    plyStatusMessages[3]
+  );
 
   const oppositeActiveColorName = resultingACIsWhite ? "black" : "white";
 
@@ -1258,6 +1270,7 @@ function cpuPlay(legalMoves) {
 
 export default {
   ui: {
+    plyStatusMessages,
     PGNSevenTagRoster,
     getGameStatus,
     expand,
