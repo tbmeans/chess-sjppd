@@ -4,7 +4,7 @@
 const an64 = Object.freeze(
   Array.from(
     {length: 64},
-    (v, i) => "abcdefgh"[i % 8] + "12345678"[(i - i % 8) / 8]
+    (v, k) => "abcdefgh"[k % 8] + "12345678"[(k - k % 8) / 8]
   )
 );
 
@@ -80,70 +80,12 @@ const color = s => {
 };
 
 /**
- * List alg. notation of squares from start to end of board, up or down ranks
- * @param {string} n algebraic notation of a square to start the sequence
- * @param {boolean} isUp choice of whether the next goes up in rank or down
- * @returns comma-separated list of algebraic notation in sequence after given
- *     start square to the chessboard boundary in the given rank
- *     direction--note that start square is not included, and if next in
- *     sequence does not exist due to boundary, returns empty string
- */
-const fileSeq = (startSquare, isUp) => {
-  return an64.filter(n => {
-    return (
-      n[0] === startSquare[0] &&
-      (isUp ? n[1] > startSquare[1] : n[1] < startSquare[1])
-    );
-  }).map( (n, i, seq) => isUp ? n : seq[seq.length - 1 - i] ).join();
-};
-
-/**
- * List algebraic notation of squares from start to end of board, left or
- *     right across files
- * @param {string} n algebraic notation of a square to start the sequence
- * @param {boolean} isRt choice of whether the next goes right or left in file
- *     sequence by alpha
- * @returns comma-separated list of algebraic notation in sequence after given
- *     start square to the chessboard boundary in the given file
- *     direction--note that start square is not included, and if next in
- *     sequence does not exist due to boundary, returns empty string
- */
-const rankSeq = (startSquare, isRt) => {
-  return an64.filter(n => {
-    return (
-      n[1] === startSquare[1] &&
-      (isRt ? n > startSquare : n < startSquare)
-    );
-  }).map( (n, i, seq) => isRt ? n : seq[seq.length - 1 - i] ).join();
-};
-
-/**
- * Step along a chessboard anti/diagonal
- * @param {string} n algebraic notation of a square to start the sequence
- * @param {boolean} isUp choice of whether the next goes up in rank or down
- * @param {boolean} isAnti choice of whether we want the next square on the
- *     anti-diagonal or diagonal
- * @returns algebraic notation of the next square in sequence along a
- *     chessboard anti/diagonal as indicated by params
- */
-const nextOnDiag = (n, isUp, isAnti) => {
-  return (
-    String.fromCharCode( /* next file */
-      n.charCodeAt() + (isAnti ? -1 : 1) * (isUp ? 1 : -1)
-    ) +
-    String.fromCharCode( /* next rank */
-      n.charCodeAt(1) + (isUp ? 1 : -1)
-    )
-  );
-};
-
-/**
  * Use the Forsyth-Edwards Notation character for a piece of a type and color
  * as a key to get the Unicode symbol for that piece. White and black kings are
  * not included because this is meant to be used as a way to make a symbolic
  * list of all captured pieces, and kings can't be captured.
  */
-const charTable = Object.freeze({
+ const charTable = Object.freeze({
   Q: '\u2655',
   R: '\u2656',
   B: '\u2657',
@@ -165,29 +107,65 @@ const charTable = Object.freeze({
 const nFEToUnicode = n => n.split('').map(s => charTable[s]).join('');
 
 /**
+ * List alg. notation of squares from start to end of board, up or down ranks
+ * @param {string} n algebraic notation of a square to start the sequence
+ * @param {boolean} isUp choice of whether the next goes up in rank or down
+ * @returns comma-separated list of algebraic notation in sequence after given
+ *     start square to the chessboard boundary in the given rank
+ *     direction--note that start square is not included, and if next in
+ *     sequence does not exist due to boundary, returns empty string
+ */
+const fileSeq = (startSquare, isUp) => {
+  return an64.filter(n => {
+    return (
+      n[0] === startSquare[0] && (
+        isUp ? n[1] > startSquare[1] : n[1] < startSquare[1]
+      )
+    );
+  }).map(isUp ? n => n : reverse).join();
+};
+
+/**
+ * List algebraic notation of squares from start to end of board, left or
+ *     right across files
+ * @param {string} n algebraic notation of a square to start the sequence
+ * @param {boolean} isRt choice of whether the next goes right or left in file
+ *     sequence by alpha
+ * @returns comma-separated list of algebraic notation in sequence after given
+ *     start square to the chessboard boundary in the given file
+ *     direction--note that start square is not included, and if next in
+ *     sequence does not exist due to boundary, returns empty string
+ */
+const rankSeq = (startSquare, isRt) => {
+  return an64.filter(n => {
+    return (
+      n[1] === startSquare[1] && (isRt ? n > startSquare : n < startSquare)
+    );
+  }).map(isUp ? n => n : reverse).join();
+};
+
+/**
  * List the squares of any diagonal ray on chessboard in algebraic notation
  * @param {string} n algebraic notation of a square to start the sequence
  * @param {boolean} isUp choice of whether the sequence goes up or down in rank
  *     along the anti/diagonal
  * @param {boolean} isAnti choice of whether the sequence is on the
  *     anti-diagonal or diagonal
- * @returns comma-separated list of algebraic notation in sequence from given
+ * @returns comma-separated list of algebraic notation in sequence after given
  *     start square to the chessboard boundary in the given anti/diagonal
- *     direction--note that start square IS included and if sequence goes out
- *     of bounds beyond start square, the lone start square is returned back
+ *     direction--note that start square is not included and if next in
+ *     sequence does not exist due to boundary, returns empty string
  */
- function diagSeq(n, isUp, isAnti) {
-  const fileStop = isUp && !isAnti || !isUp && isAnti ? 'h' : 'a';
-  const rankStop = isUp ? 8 : 1;
-  if (
-    n.slice(-2, -1) === fileStop ||
-    n.slice(-1) == rankStop ||
-    n.match(/[a-h][1-8]/) == null
-  ) {
-    return n;
-  }
-  return n + ',' + diagSeq(nextOnDiag(n, isUp, isAnti), isUp, isAnti);
-}
+const diagSeq = (startSquare, isUp, isAnti) => {
+  return an64.filter(n => {
+    return (
+      n !== startSquare &&
+          n.charCodeAt() - startSquare.charCodeAt() === (isAnti ? -1 : 1) *
+              (n[1] - startSquare[1]) &&
+                  (isUp ? n[1] > startSquare[1] : n[1] < startSquare[1])
+    );
+  }).map(isUp ? n => n : reverse).join();
+};
 
 /**
  * Chessboard rays as sequences of algebraic notation
@@ -196,18 +174,18 @@ const nFEToUnicode = n => n.split('').map(s => charTable[s]).join('');
  * @returns 8 comma-delimited strings representing each chessboard square
  *     sequence ray out from the origin, in order clockwise from north/12'o'clock
  */
-function raysFrom(origin) {
+const raysFrom = (origin) => {
   return Object.freeze([
-    fileSeq(origin, true),
-    diagSeq(origin, true).slice(3),
-    rankSeq(origin, true),
-    diagSeq(origin, false, true).slice(3),
-    fileSeq(origin),
-    diagSeq(origin).slice(3),
-    rankSeq(origin),
-    diagSeq(origin, true, true).slice(3)
+    fileSeq(origin, 'up'),
+    diagSeq(origin, 'up', isAnti = false),
+    rankSeq(origin, 'right'),
+    diagSeq(origin, isUp = false, 'anti'),
+    fileSeq(origin, isUp = false),
+    diagSeq(origin, isUp = false, isAnti = false),
+    rankSeq(origin, isRt = false),
+    diagSeq(origin, 'up', 'anti')
   ]);
-}
+};
 
 /**
  * Get a set of all jump moves from a given square in a same order for listing

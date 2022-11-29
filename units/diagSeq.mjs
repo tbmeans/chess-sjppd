@@ -7,43 +7,43 @@ const { diagSeq } = engine.units
 
 const listAng = {
   invalidNotationReturnsSame() {
-    assertWithErrHandling('i9', null, null, 'i9');
+    assertWithErrHandling('i9', null, null, '');
   },
 	midBoardIsUpButNoBooleanForIsAntiGoesNE() {
-		assertWithErrHandling('e4', true, null, 'e4,f5,g6,h7');
+		assertWithErrHandling('e4', true, null, 'f5,g6,h7');
 	},
   midBoardNotIsUpAndIsAntiGoesSE() {
-		assertWithErrHandling('e4', false, true, 'e4,f3,g2,h1');
+		assertWithErrHandling('e4', false, true, 'f3,g2,h1');
 	},
 	midBoardNotIsUpAndNotIsAntiGoesSW() {
-		assertWithErrHandling('e4', null, null, 'e4,d3,c2,b1');
+		assertWithErrHandling('e4', null, null, 'd3,c2,b1');
 	},
   midBoardIsUpAndIsAntiGoesNW() {
-		assertWithErrHandling('e4', true, true, 'e4,d5,c6,b7,a8');
+		assertWithErrHandling('e4', true, true, 'd5,c6,b7,a8');
 	},
   topLeftCornerAndIsUpButOmitIsAntiForNEGoesNowhere() {
-    assertWithErrHandling('a8', true, null, 'a8');
+    assertWithErrHandling('a8', true, null, '');
   },
   topLeftCornerNotIsUpAndIsAntiGoesSE() {
-    assertWithErrHandling('a8', false, true, 'a8,b7,c6,d5,e4,f3,g2,h1');
+    assertWithErrHandling('a8', false, true, 'b7,c6,d5,e4,f3,g2,h1');
   },
   topLeftCornerAndNoBooleansForSWGoesNowhere() {
-    assertWithErrHandling('a8', null, null, 'a8');
+    assertWithErrHandling('a8', null, null, '');
   },
   topLeftCornerAndIsUpAndIsAntiForNWGoesNowhere() {
-    assertWithErrHandling('a8', true, true, 'a8');
+    assertWithErrHandling('a8', true, true, '');
   },
   rightEdgeAndIsUpButOmitIsAntiForNEGoesNowhere() {
-    assertWithErrHandling('h4', true, null, 'h4');
+    assertWithErrHandling('h4', true, null, '');
   },
   rightEdgeNotIsUpAndIsAntiForSEGoesNowhere() {
-    assertWithErrHandling('h4', false, true, 'h4');
+    assertWithErrHandling('h4', false, true, '');
   },
   rightEdgeAndNoBooleansGoesSW() {
-    assertWithErrHandling('h4', null, null, 'h4,g3,f2,e1');
+    assertWithErrHandling('h4', null, null, 'g3,f2,e1');
   },
   rightEdgeAndIsUpAndIsAntiGoesNW() {
-    assertWithErrHandling('h4', true, true, 'h4,g5,f6,e7,d8');
+    assertWithErrHandling('h4', true, true, 'g5,f6,e7,d8');
   }
 };
 
